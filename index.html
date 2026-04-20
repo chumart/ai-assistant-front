@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,7 +32,7 @@
     overflow: hidden;
   }
 
-  /* ========== 侧边栏及历史记录 ========== */
+  /* ========== Sidebar & History ========== */
   .sidebar {
     width: 280px;
     background: var(--sidebar-bg);
@@ -89,12 +89,12 @@
   .history-item:hover .trash-btn { display: inline-block; }
   .trash-btn:hover { color: #dc362e; }
 
-  /* ========== 主体区域 ========== */
+  /* ========== Main Content ========== */
   .main-content { flex: 1; display: flex; flex-direction: column; position: relative; height: 100%; }
   .header { height: 64px; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; }
   .header-title { font-size: 18px; font-weight: 500; color: var(--text-secondary); }
 
-  /* ========== 聊天显示区 ========== */
+  /* ========== Chat Display Area ========== */
   .chat-container {
     flex: 1; overflow-y: auto; padding: 20px 20px 140px 20px; scroll-behavior: smooth; display: flex; flex-direction: column; align-items: center;
   }
@@ -106,7 +106,7 @@
   
   #messageList { display: flex; flex-direction: column; gap: 32px; width: 100%; }
 
-  /* --- 欢迎语 --- */
+  /* --- Empty State (Greeting) --- */
   .empty-state { display: flex; flex-direction: column; margin-top: 8vh; width: 100%; animation: fadeIn 0.5s ease; }
   .greeting { font-size: 42px; font-weight: 500; letter-spacing: -0.03em; margin-bottom: 40px; }
   .greeting .gradient-text { background: -webkit-linear-gradient(45deg, #4285f4, #d96570, #9b72cb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -115,7 +115,7 @@
   .suggestion-card { background: var(--surface-color); padding: 16px 20px; border-radius: var(--radius-lg); border: none; text-align: left; cursor: pointer; font-size: 14px; color: var(--text-secondary); transition: background 0.2s; line-height: 1.5; }
   .suggestion-card:hover { background: #e3e7ec; }
 
-  /* --- 消息样式 --- */
+  /* --- Messages --- */
   .message-wrapper { display: flex; gap: 16px; animation: slideUp 0.3s ease; }
   .message-wrapper.user { flex-direction: row-reverse; }
   .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -126,7 +126,7 @@
   .message-wrapper.user .message-content { background: var(--user-bubble); padding: 12px 20px; border-radius: 24px 4px 24px 24px; color: var(--text-primary); }
   .error-text { color: #dc362e; }
 
-  /* ========== 底部输入区 ========== */
+  /* ========== Input Area ========== */
   .input-area { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, var(--bg-color) 70%, transparent); padding: 20px 24px 30px; display: flex; flex-direction: column; align-items: center; }
   .input-box-wrapper { width: 100%; max-width: 800px; background: var(--surface-color); border-radius: 32px; padding: 8px 8px 8px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: box-shadow 0.3s, background 0.3s; }
   .input-box-wrapper:focus-within { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid var(--border-color); }
@@ -136,7 +136,7 @@
   .send-btn:disabled { background: #e3e3e3; color: #a8a8a8; cursor: not-allowed; }
   .disclaimer { font-size: 12px; color: var(--text-muted); margin-top: 12px; }
 
-  /* --- 动画 --- */
+  /* --- Animations --- */
   .typing-indicator { display: flex; gap: 4px; padding: 8px 0; }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: bounce 1.4s infinite ease-in-out both; }
   .dot:nth-child(1) { animation-delay: -0.32s; }
@@ -152,10 +152,10 @@
   <div class="sidebar">
     <button class="new-chat-btn" onclick="newChat()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      新对话
+      New Chat
     </button>
     <div class="sidebar-nav">
-      <div class="nav-title">最近对话</div>
+      <div class="nav-title">Recent Chats</div>
       <div id="historyList" class="history-list"></div>
     </div>
   </div>
@@ -173,14 +173,14 @@
       <div class="chat-content">
         <div class="empty-state" id="emptyState">
           <div class="greeting">
-            <div class="gradient-text">您好，Chumart</div>
-            <div class="sub-text">我是您的专属助手，今天有什么我可以帮您的？</div>
+            <div class="gradient-text">Hello, Chumart</div>
+            <div class="sub-text">I am your enterprise assistant. How can I help you today?</div>
           </div>
           <div class="suggestions-grid">
-            <button class="suggestion-card" onclick="quickSend('查询最近的销售订单')">📊 最近的销售订单</button>
-            <button class="suggestion-card" onclick="quickSend('查下54rs的库存')">📦 54rs 产品库存</button>
-            <button class="suggestion-card" onclick="quickSend('查找特定客户的联系方式')">👥 查找客户资料</button>
-            <button class="suggestion-card" onclick="quickSend('这款设备日常怎么维护？')">🔧 培训与产品知识</button>
+            <button class="suggestion-card" onclick="quickSend('Show me recent sales orders')">📊 Recent sales orders</button>
+            <button class="suggestion-card" onclick="quickSend('Check inventory for 54rs')">📦 Check 54rs inventory</button>
+            <button class="suggestion-card" onclick="quickSend('Find contact info for a specific customer')">👥 Find customer details</button>
+            <button class="suggestion-card" onclick="quickSend('How do I maintain this equipment daily?')">🔧 Training & product knowledge</button>
           </div>
         </div>
         
@@ -190,22 +190,21 @@
 
     <div class="input-area">
       <div class="input-box-wrapper">
-        <input class="input-box" id="inputBox" placeholder="输入业务问题..." autocomplete="off" onkeydown="handleKey(event)">
+        <input class="input-box" id="inputBox" placeholder="Ask a question (Supports English & Chinese)..." autocomplete="off" onkeydown="handleKey(event)">
         <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </div>
-      <div class="disclaimer">Chumart Assistant 数据实时同步自 Odoo 系统。</div>
+      <div class="disclaimer">Chumart Assistant data is synced in real-time from Odoo ERP.</div>
     </div>
   </div>
 
 <script>
-  const BACKEND = 'https://chumart-ai.up.railway.app'; // 你的 Railway 后端
+  const BACKEND = 'https://chumart-ai.up.railway.app'; // Your Railway Backend
   
-  // 新增的数据状态变量
-  let allSessions = [];       // 存放所有历史会话
-  let currentSessionId = null;// 当前活跃的会话ID
-  let history = [];           // 传给 AI 的当前上下文
+  let allSessions = [];       
+  let currentSessionId = null;
+  let history = [];           
   let busy = false;
 
   const input = document.getElementById('inputBox');
@@ -215,44 +214,34 @@
   const emptyState = document.getElementById('emptyState');
   const historyListEl = document.getElementById('historyList');
 
-  // ========== 历史记录系统 ==========
-
-  // 1. 初始化：页面加载时读取 localStorage
   window.onload = () => {
     const saved = localStorage.getItem('chumartChats');
     if (saved) {
       allSessions = JSON.parse(saved);
     }
-    
     if (allSessions.length > 0) {
-      // 如果有历史记录，自动加载第一条
       loadSession(allSessions[0].id);
     } else {
-      // 否则创建新对话
       newChat();
     }
   };
 
-  // 2. 开启新对话
   function newChat() {
-    currentSessionId = Date.now().toString(); // 用时间戳做唯一ID
+    currentSessionId = Date.now().toString(); 
     history = [];
     messageList.innerHTML = '';
-    emptyState.style.display = 'flex'; // 显示欢迎页
+    emptyState.style.display = 'flex'; 
     renderSidebar();
   }
 
-  // 3. 加载特定对话
   function loadSession(id) {
     currentSessionId = id;
     const session = allSessions.find(s => s.id === id);
     history = session ? session.history : [];
     
-    // 清空当前页面，重新渲染
     messageList.innerHTML = '';
     emptyState.style.display = history.length === 0 ? 'flex' : 'none';
 
-    // 渲染历史消息气泡
     history.forEach(msg => {
       if (msg.role === 'user') {
         renderUserMsgDOM(msg.content);
@@ -265,24 +254,20 @@
     scrollBottom();
   }
 
-  // 4. 保存当前对话到本地
   function saveCurrentSession(firstMsgText = '') {
     let session = allSessions.find(s => s.id === currentSessionId);
     
     if (!session) {
-      // 这是一个全新对话，给它起个标题（取用户说的第一句话的前15个字）
-      const title = firstMsgText.substring(0, 15) || '新对话';
+      const title = firstMsgText.substring(0, 15) || 'New Chat';
       session = { id: currentSessionId, title: title, history: [] };
-      allSessions.unshift(session); // 插到数组最前面
+      allSessions.unshift(session); 
     }
     
     session.history = history;
-    // 存入浏览器硬盘
     localStorage.setItem('chumartChats', JSON.stringify(allSessions));
     renderSidebar();
   }
 
-  // 5. 渲染左侧边栏列表
   function renderSidebar() {
     historyListEl.innerHTML = '';
     allSessions.forEach(session => {
@@ -290,12 +275,11 @@
       div.className = `history-item ${session.id === currentSessionId ? 'active' : ''}`;
       div.innerText = session.title;
       
-      // 删除按钮功能
       const delSpan = document.createElement('span');
       delSpan.innerHTML = ' ✕';
       delSpan.className = 'trash-btn';
       delSpan.onclick = (e) => {
-        e.stopPropagation(); // 阻止触发外层的点击事件
+        e.stopPropagation(); 
         deleteSession(session.id);
       };
       
@@ -305,7 +289,6 @@
     });
   }
 
-  // 6. 删除对话
   function deleteSession(id) {
     allSessions = allSessions.filter(s => s.id !== id);
     localStorage.setItem('chumartChats', JSON.stringify(allSessions));
@@ -317,16 +300,12 @@
     }
   }
 
-
-  // ========== 聊天交互逻辑 ==========
-
   input.addEventListener('input', () => { sendBtn.disabled = !input.value.trim() || busy; });
   function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
   function quickSend(text) { input.value = text; sendMessage(); }
   function hideEmpty() { emptyState.style.display = 'none'; }
   function scrollBottom() { messagesContainer.scrollTop = messagesContainer.scrollHeight; }
 
-  // 纯粹渲染 DOM 的函数
   function renderUserMsgDOM(text) {
     hideEmpty();
     const row = document.createElement('div');
@@ -353,7 +332,6 @@
   }
   function removeTyping() { const t = document.getElementById('typingIndicator'); if (t) t.remove(); }
 
-  // 转义和格式化
   function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function formatText(text) {
     if (!text) return '';
@@ -364,23 +342,19 @@
     }).join('');
   }
 
-  // 发送消息
   async function sendMessage() {
     const msg = input.value.trim();
     if (!msg || busy) return;
     busy = true; input.value = ''; sendBtn.disabled = true;
     
-    // 1. 渲染用户消息
     renderUserMsgDOM(msg);
     showTyping();
 
-    // 如果这是新对话的第一句话，先做一次保存触发标题生成
     if (history.length === 0) {
       saveCurrentSession(msg);
     }
 
     try {
-      // 2. 发起请求
       const res = await fetch(`${BACKEND}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -389,20 +363,18 @@
       const data = await res.json();
       removeTyping();
       
-      const reply = data.reply || '(无响应)';
+      const reply = data.reply || '(No response)';
       
-      // 3. 渲染回复并加入记忆
       renderBotMsgDOM(reply, false);
       history.push({ role: 'user', content: msg });
       history.push({ role: 'assistant', content: reply });
       
-      // 4. 更新本地存储
       saveCurrentSession();
       scrollBottom();
       
     } catch (err) {
       removeTyping();
-      renderBotMsgDOM(`网络错误或超时: ${err.message}`, true);
+      renderBotMsgDOM(`Network error or timeout: ${err.message}`, true);
       scrollBottom();
     } finally {
       busy = false; sendBtn.disabled = !input.value.trim(); input.focus();
