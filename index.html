@@ -452,16 +452,12 @@
   // ── Init ──────────────────────────────────────────────────────────────────
 
   window.addEventListener('load', () => {
-    const saved = localStorage.getItem('chumartChats');
-    if (saved) try { allSessions = JSON.parse(saved); } catch(e) {}
     const user = sessionStorage.getItem('chumart_user');
     if (user) {
       currentUser = JSON.parse(user);
-      showApp();
-      if (allSessions.length > 0) loadSession(allSessions[0].id);
-      else newChat();
+      showApp(); // async — loads sessions from DB
     }
-    // If not logged in, login screen stays visible
+    // No user → login screen stays visible
   });
 
   // ── Session management ────────────────────────────────────────────────────
@@ -499,11 +495,22 @@
     s.history = history;
     localStorage.setItem('chumartChats', JSON.stringify(allSessions));
     renderSidebar();
+    // Also persist to DB (fire and forget)
+    if (currentUser?.uid) {
+      fetch(`${BACKEND}/sessions/${currentSessionId}`, {
+        method: 'DELETE',
+        // We re-save via chat endpoint, this is just for delete tracking
+      }).catch(()=>{});
+    }
   }
 
   function deleteSession(id) {
     allSessions = allSessions.filter(s => s.id !== id);
     localStorage.setItem('chumartChats', JSON.stringify(allSessions));
+    // Delete from DB
+    if (currentUser?.uid) {
+      fetch(`${BACKEND}/sessions/${id}?uid=${currentUser.uid}`, { method: 'DELETE' }).catch(()=>{});
+    }
     if (currentSessionId === id) {
       allSessions.length ? loadSession(allSessions[0].id) : newChat();
     } else renderSidebar();
@@ -765,7 +772,9 @@
         user_name: currentUser?.name || '',
         user_id: currentUser?.uid || 0,
         model: selectedModel,
-        free_mode: freeMode
+        free_mode: freeMode,
+        session_id: currentSessionId || '',
+        session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20)
       };
       const res = await fetch(BACKEND + '/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -807,8 +816,7 @@
         currentUser = { uid: data.uid, name: data.name, username: data.username,
           role: data.role || 'guest', role_label: data.role_label || '', permissions: data.permissions || {} };
         sessionStorage.setItem('chumart_user', JSON.stringify(currentUser));
-        showApp();
-        if (allSessions.length) loadSession(allSessions[0].id); else newChat();
+        showApp();  // showApp now loads sessions from DB
       } else {
         showLoginError(data.error || 'Invalid username or password.');
       }
@@ -824,25 +832,43 @@
     el.textContent = msg; el.style.display = 'block';
   }
 
-  function showApp() {
+  async function showApp() {
     document.getElementById('loginScreen').style.display = 'none';
     const initials = (currentUser.name || currentUser.username || '?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     document.getElementById('userAvatar').textContent = initials;
     document.getElementById('userName').textContent = currentUser.name || currentUser.username;
     document.getElementById('roleBadge').textContent = currentUser.role_label || currentUser.role || '';
-    // Show model selector for all logged-in users
     document.getElementById('modelSelectorWrap').style.display = 'block';
-    // Show mode toggle only for admin
-    if (currentUser.role === 'admin') {
-      document.getElementById('modeSelectorWrap').classList.add('visible');
-    }
-    // Non-admin: only show Sonnet and Haiku
     if (currentUser.role !== 'admin') {
       document.getElementById('modelSelect').innerHTML = `
         <optgroup label="── Claude ──">
           <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
           <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 · Fast</option>
         </optgroup>`;
+    }
+    if (currentUser.role === 'admin') {
+      document.getElementById('modeSelectorWrap').classList.add('visible');
+    }
+    // Load sessions from DB
+    await loadSessionsFromDB();
+  }
+
+  async function loadSessionsFromDB() {
+    if (!currentUser?.uid) { if (allSessions.length) loadSession(allSessions[0].id); else newChat(); return; }
+    try {
+      const res = await fetch(`${BACKEND}/sessions/${currentUser.uid}`);
+      const data = await res.json();
+      if (data.sessions && data.sessions.length > 0) {
+        allSessions = data.sessions.map(s => ({ id: s.id, title: s.title, history: s.history }));
+        renderSidebar();
+        loadSession(allSessions[0].id);
+      } else {
+        newChat();
+      }
+    } catch(e) {
+      const saved = localStorage.getItem('chumartChats');
+      if (saved) try { allSessions = JSON.parse(saved); } catch(ex) {}
+      if (allSessions.length) loadSession(allSessions[0].id); else newChat();
     }
   }
 
