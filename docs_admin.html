@@ -405,7 +405,8 @@
 
     try {
       fill.style.width = '60%';
-      const res = await fetch(`${BACKEND}/admin/upload-doc?admin_key=${encodeURIComponent(adminKey)}`, { method: 'POST', body: fd });
+      const uploadUrl = `${BACKEND}/admin/upload-doc?admin_key=${encodeURIComponent(adminKey)}&category=${encodeURIComponent(category)}&description=${encodeURIComponent(description)}`;
+      const res = await fetch(uploadUrl, { method: 'POST', body: fd });
       const data = await res.json();
       fill.style.width = '100%';
 
