@@ -402,11 +402,10 @@
     fd.append('file', selectedFile);
     fd.append('category', category);
     fd.append('description', description);
-    fd.append('admin_key', adminKey);
 
     try {
       fill.style.width = '60%';
-      const res = await fetch(`${BACKEND}/admin/upload-doc`, { method: 'POST', body: fd });
+      const res = await fetch(`${BACKEND}/admin/upload-doc?admin_key=${encodeURIComponent(adminKey)}`, { method: 'POST', body: fd });
       const data = await res.json();
       fill.style.width = '100%';
 
