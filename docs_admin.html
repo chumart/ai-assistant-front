@@ -141,6 +141,22 @@
 
   .loading { text-align: center; padding: 32px; color: #888; font-size: 14px; }
 
+  /* Batch upload queue */
+  .batch-queue { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .queue-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; background: #fafafa; border: 1px solid #eee;
+    border-radius: 8px; font-size: 13px;
+  }
+  .queue-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #111; }
+  .queue-item-status { font-size: 12px; flex-shrink: 0; font-weight: 500; }
+  .status-pending { color: #999; }
+  .status-uploading { color: #0b57d0; }
+  .status-done { color: #16a34a; }
+  .status-error { color: #dc2626; }
+  .queue-item-remove { background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; padding: 0; flex-shrink: 0; }
+  .queue-item-remove:hover { color: #dc2626; }
+
   /* Login overlay */
   #loginOverlay {
     position: fixed; inset: 0; background: #fafafa;
@@ -214,10 +230,10 @@
       ondrop="handleDrop(event)">
       <div class="drop-zone-icon">📂</div>
       <div class="drop-zone-text"><strong>Click to upload</strong> or drag and drop</div>
-      <div class="drop-zone-sub">PDF, Word, images, TXT — up to 50MB</div>
+      <div class="drop-zone-sub">PDF, Word, images, TXT · Multiple files supported</div>
       <div class="file-selected" id="fileSelected"></div>
     </div>
-    <input type="file" id="fileInput" style="display:none" accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg,.webp" onchange="onFileSelect(this)">
+    <input type="file" id="fileInput" style="display:none" accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg,.webp" multiple onchange="onFileSelect(this)">
 
     <div class="form-row">
       <div class="form-group">
@@ -263,7 +279,7 @@
   let adminKey = '';
   let allDocs = [];
   let currentFilter = 'all';
-  let selectedFile = null;
+  let fileQueue = []; // [{file, id}]
 
   function checkAdminKey() {
     const key = document.getElementById('adminKeyInput').value;
@@ -369,63 +385,108 @@
   }
 
   function onFileSelect(input) {
-    selectedFile = input.files[0];
-    if (selectedFile) {
-      document.getElementById('fileSelected').textContent = `✓ ${selectedFile.name} (${formatSize(selectedFile.size)})`;
-    }
+    const files = Array.from(input.files);
+    addFilesToQueue(files);
+    input.value = '';
+  }
+
+  function addFilesToQueue(files) {
+    files.forEach(file => {
+      fileQueue.push({ file, id: Date.now() + Math.random() });
+    });
+    renderQueue();
+  }
+
+  function removeFromQueue(id) {
+    fileQueue = fileQueue.filter(q => q.id !== id);
+    renderQueue();
+  }
+
+  function renderQueue() {
+    const sel = document.getElementById('fileSelected');
+    if (!fileQueue.length) { sel.innerHTML = ''; return; }
+    sel.innerHTML = `<div class="batch-queue">${fileQueue.map(q =>
+      `<div class="queue-item" id="qi_${q.id}">
+        <span style="font-size:16px">${getFileEmoji(q.file.name)}</span>
+        <span class="queue-item-name">${esc(q.file.name)}</span>
+        <span class="queue-item-status status-pending" id="qs_${q.id}">${formatSize(q.file.size)}</span>
+        <button class="queue-item-remove" onclick="removeFromQueue(${q.id})">✕</button>
+      </div>`
+    ).join('')}</div>`;
+  }
+
+  function getFileEmoji(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return '📄';
+    if (['docx','doc'].includes(ext)) return '📝';
+    if (['png','jpg','jpeg','webp'].includes(ext)) return '🖼';
+    return '📁';
   }
 
   function handleDrop(e) {
     e.preventDefault();
     document.getElementById('dropZone').classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      selectedFile = file;
-      document.getElementById('fileSelected').textContent = `✓ ${file.name} (${formatSize(file.size)})`;
-    }
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) addFilesToQueue(files);
   }
 
   async function uploadDoc() {
-    if (!selectedFile) { showAlert('Please select a file first.', 'error'); return; }
+    if (!fileQueue.length) { showAlert('Please select at least one file.', 'error'); return; }
     const category = document.getElementById('categorySelect').value;
     const description = document.getElementById('descInput').value;
     const btn = document.getElementById('uploadBtn');
     btn.disabled = true;
-    btn.textContent = 'Uploading…';
 
     const bar = document.getElementById('progressBar');
     const fill = document.getElementById('progressFill');
     bar.style.display = 'block';
-    fill.style.width = '30%';
 
-    const fd = new FormData();
-    fd.append('file', selectedFile);
-    fd.append('category', category);
-    fd.append('description', description);
+    const total = fileQueue.length;
+    let done = 0, errors = 0;
+    const snapshot = [...fileQueue];
 
-    try {
-      fill.style.width = '60%';
-      const uploadUrl = `${BACKEND}/admin/upload-doc?admin_key=${encodeURIComponent(adminKey)}&category=${encodeURIComponent(category)}&description=${encodeURIComponent(description)}`;
-      const res = await fetch(uploadUrl, { method: 'POST', body: fd });
-      const data = await res.json();
-      fill.style.width = '100%';
+    for (const item of snapshot) {
+      // Update status
+      const statusEl = document.getElementById(`qs_${item.id}`);
+      if (statusEl) { statusEl.textContent = 'Uploading…'; statusEl.className = 'queue-item-status status-uploading'; }
+      btn.textContent = `Uploading ${done + 1} / ${total}…`;
+      fill.style.width = `${Math.round(((done) / total) * 100)}%`;
 
-      if (data.error) {
-        showAlert(data.error, 'error');
-      } else {
-        showAlert(`✓ "${selectedFile.name}" uploaded! Indexing in background — will be searchable in ~1 min.`, 'success');
-        selectedFile = null;
-        document.getElementById('fileSelected').textContent = '';
-        document.getElementById('descInput').value = '';
-        setTimeout(() => loadDocs(), 3000);
+      try {
+        const fd = new FormData();
+        fd.append('file', item.file);
+        const uploadUrl = `${BACKEND}/admin/upload-doc?admin_key=${encodeURIComponent(adminKey)}&category=${encodeURIComponent(category)}&description=${encodeURIComponent(description || item.file.name.replace(/\.[^.]+$/, ''))}`;
+        const res = await fetch(uploadUrl, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.error) {
+          if (statusEl) { statusEl.textContent = '✗ ' + data.error; statusEl.className = 'queue-item-status status-error'; }
+          errors++;
+        } else {
+          if (statusEl) { statusEl.textContent = '✓ Done'; statusEl.className = 'queue-item-status status-done'; }
+          // Remove from queue after success
+          fileQueue = fileQueue.filter(q => q.id !== item.id);
+        }
+      } catch(e) {
+        if (statusEl) { statusEl.textContent = '✗ Failed'; statusEl.className = 'queue-item-status status-error'; }
+        errors++;
       }
-    } catch(e) {
-      showAlert('Upload failed: ' + e.message, 'error');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Upload & Index Document';
-      setTimeout(() => { bar.style.display = 'none'; fill.style.width = '0%'; }, 2000);
+      done++;
     }
+
+    fill.style.width = '100%';
+    const succeeded = done - errors;
+    if (errors === 0) {
+      showAlert(`✓ ${succeeded} file${succeeded > 1 ? 's' : ''} uploaded! Indexing in background (~1 min per file).`, 'success');
+      document.getElementById('fileSelected').innerHTML = '';
+      document.getElementById('descInput').value = '';
+    } else {
+      showAlert(`${succeeded} uploaded, ${errors} failed. Check errors above.`, errors === done ? 'error' : 'success');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Upload & Index Document';
+    setTimeout(() => { bar.style.display = 'none'; fill.style.width = '0%'; }, 2000);
+    setTimeout(() => loadDocs(), 4000);
   }
 
   async function deleteDoc(id, name) {
