@@ -316,7 +316,7 @@
   let busy = false;
 
   // File state
-  let attachedFile = null;     // { name, content, b64, mediaType } — populated after upload
+  let attachedFile = null;     // { name, content, fileId } — populated after upload
   let isUploading = false;
 
   const input = document.getElementById('inputBox');
@@ -442,9 +442,8 @@
 
       attachedFile = {
         name: data.name || file.name,
-        content: data.text || '',           // for txt/csv
-        b64: data.file_b64 || '',           // for PDF/image
-        mediaType: data.file_media_type || ''
+        content: data.text || '',    // for txt/csv
+        fileId: data.file_id || ''   // for PDF/image — server-side cache key
       };
       showFilePreview(attachedFile.name, null, false);
 
@@ -593,8 +592,7 @@
         history: history.map(({ role, content }) => ({ role, content })),
         file_content: fileForThisMsg?.content || '',
         file_name: fileForThisMsg?.name || '',
-        file_b64: fileForThisMsg?.b64 || '',
-        file_media_type: fileForThisMsg?.mediaType || ''
+        file_id: fileForThisMsg?.fileId || ''
       };
 
       const res = await fetch(`${BACKEND}/chat`, {
