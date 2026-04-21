@@ -550,7 +550,7 @@
     try {
       const payload = {
         message: msg,
-        history: history,
+        history: history.map(({ role, content }) => ({ role, content })),
         file_content: fileForThisMsg?.content || '',
         file_name: fileForThisMsg?.name || ''
       };
