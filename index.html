@@ -668,7 +668,33 @@
     text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
     text = text.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
     text = text.replace(/`([^`]+?)`/g, '<code style="background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:monospace">$1</code>');
+    // Markdown links [text](url) — handle signed URLs specially
+    text = text.replace(/\[([^\]]+)\]\(\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
+      return `<button onclick="downloadSignedDoc('${docId}','${label}')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#111;color:#fff;border:none;border-radius:6px;font-size:12.5px;cursor:pointer;font-family:inherit;margin-top:4px">📥 ${label}</button>`;
+    });
+    // Regular links
+    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:#0b57d0;text-decoration:underline">$1</a>');
     return text;
+  }
+
+  async function downloadSignedDoc(docId, label) {
+    try {
+      const res = await fetch(`${BACKEND}/docs/signed-url/${docId}`);
+      const data = await res.json();
+      if (data.url) {
+        const a = document.createElement('a');
+        a.href = data.url;
+        a.download = data.filename || label;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        alert('Could not get download link: ' + (data.error || 'Unknown error'));
+      }
+    } catch(e) {
+      alert('Download failed: ' + e.message);
+    }
   }
 
   function parseMarkdownTable(lines, startIdx) {
