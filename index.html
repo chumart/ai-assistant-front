@@ -319,7 +319,7 @@
           </svg>
         </button>
 
-        <input class="input-box" id="inputBox" placeholder="Ask a question (Supports English & Chinese)..." autocomplete="off" onkeydown="handleKey(event)">
+        <input class="input-box" id="inputBox" placeholder="Ask a question (Supports English & Chinese)..." autocomplete="off" onkeydown="handleKey(event)" onpaste="handlePaste(event)">
         <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
@@ -666,6 +666,60 @@
     }
     if (inList) output.push('</ul>');
     return output.join('');
+  }
+
+  // ── Paste image handler ────────────────────────────────────────────────────────
+  async function handlePaste(event) {
+    const items = event.clipboardData && event.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        // Show uploading state
+        isUploading = true;
+        sendBtn.disabled = true;
+        uploadBtn.classList.add('has-file');
+        showFilePreview(null, 'pasted image', true);
+
+        try {
+          const formData = new FormData();
+          // Give it a proper filename with extension
+          const ext = item.type.split('/')[1] || 'png';
+          const namedFile = new File([file], `paste_${Date.now()}.${ext}`, { type: item.type });
+          formData.append('file', namedFile);
+
+          const res = await fetch(`${BACKEND}/extract-file`, {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+
+          if (data.error) {
+            clearAttachment();
+            alert(`Paste failed: ${data.error}`);
+            return;
+          }
+
+          attachedFile = {
+            name: data.name || `screenshot.${ext}`,
+            content: data.text || '',
+            fileId: data.file_id || ''
+          };
+          showFilePreview(attachedFile.name, null, false);
+
+        } catch (err) {
+          clearAttachment();
+          alert(`Paste error: ${err.message}`);
+        } finally {
+          isUploading = false;
+          sendBtn.disabled = !input.value.trim();
+        }
+        return; // Only handle first image
+      }
+    }
   }
 
   // ── Send ────────────────────────────────────────────────────────────────────
