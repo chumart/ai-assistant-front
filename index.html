@@ -492,7 +492,7 @@
     msgList.innerHTML = '';
     emptyEl.style.display = history.length ? 'none' : 'flex';
     history.forEach(m => {
-      if (m.role === 'user') renderUserMsgDOM(m.content, m.fileName);
+      if (m.role === 'user') renderUserMsgDOM(m.content, m.fileName, m.imagePreview);
       else renderBotMsgDOM(m.content, false);
     });
     clearAttachment();
@@ -575,7 +575,12 @@
       if (item.type.startsWith('image/')) {
         event.preventDefault();
         const ext = item.type.split('/')[1] || 'png';
-        const file = new File([item.getAsFile()], `paste_${Date.now()}.${ext}`, { type: item.type });
+        const blob = item.getAsFile();
+        const file = new File([blob], `paste_${Date.now()}.${ext}`, { type: item.type });
+        // Store local preview before uploading
+        const reader = new FileReader();
+        reader.onload = (e) => { window._pastePreview = e.target.result; };
+        reader.readAsDataURL(blob);
         await uploadFile(file);
         return;
       }
@@ -593,8 +598,8 @@
       const res = await fetch(BACKEND + '/extract-file', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.error) { clearAttachment(); alert('Upload failed: ' + data.error); return; }
-      attachedFile = { name: data.name || file.name, content: data.text || '', fileId: data.file_id || '' };
-      showFilePreview(attachedFile.name, null, false);
+      attachedFile = { name: data.name || file.name, content: data.text || '', fileId: data.file_id || '', isImage: data.is_image || false, previewUrl: data.preview_url || '' };
+      showFilePreview(attachedFile.name, null, false, attachedFile.previewUrl);
     } catch (e) {
       clearAttachment(); alert('Upload error: ' + e.message);
     } finally {
@@ -603,13 +608,16 @@
     }
   }
 
-  function showFilePreview(name, raw, uploading) {
+  function showFilePreview(name, raw, uploading, previewUrl) {
     filePrev.style.display = 'block';
     if (uploading) {
       filePrev.innerHTML = `<div class="uploading-badge"><div class="spinner"></div>Uploading ${escHtml(raw || '')}…</div>`;
     } else {
+      const imgPreview = previewUrl
+        ? `<img src="${previewUrl}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid #e8e8e8;flex-shrink:0">`
+        : `<div class="file-chip-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>`;
       filePrev.innerHTML = `<div class="file-chip">
-        <div class="file-chip-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>
+        ${imgPreview}
         <span class="file-chip-name">${escHtml(name)}</span>
         <button class="file-chip-remove" onclick="clearAttachment()">✕</button>
       </div>`;
@@ -624,13 +632,20 @@
 
   // ── Message rendering ─────────────────────────────────────────────────────
 
-  function renderUserMsgDOM(text, fileName) {
+  function renderUserMsgDOM(text, fileName, imagePreview) {
     hideEmpty();
     const row = document.createElement('div');
     row.className = 'message-wrapper user';
-    const fileHtml = fileName ? `<div class="file-attachment-bubble">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-      ${escHtml(fileName)}</div>` : '';
+    let fileHtml = '';
+    if (fileName) {
+      if (imagePreview) {
+        fileHtml = `<div style="margin-bottom:8px"><img src="${imagePreview}" style="max-width:240px;max-height:180px;border-radius:10px;border:1px solid #e8e8e8;cursor:pointer" onclick="window.open(this.src)"></div>`;
+      } else {
+        fileHtml = `<div class="file-attachment-bubble">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+          ${escHtml(fileName)}</div>`;
+      }
+    }
     const initials = currentUser ? (currentUser.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : 'ME';
     row.innerHTML = `<div class="avatar user-av">${initials}</div><div class="message-content">${fileHtml}${escHtml(text)}</div>`;
     msgList.appendChild(row);
@@ -800,7 +815,8 @@
 
     const fileForMsg = attachedFile ? { ...attachedFile } : null;
     clearAttachment();
-    renderUserMsgDOM(msg, fileForMsg?.name);
+    renderUserMsgDOM(msg, fileForMsg?.name, fileForMsg?.previewUrl || window._pastePreview || null);
+    window._pastePreview = null;
     showTyping();
     if (!history.length) saveSession(msg);
 
@@ -827,7 +843,7 @@
       removeTyping();
       const reply = data.reply || '(No response)';
       renderBotMsgDOM(reply, false);
-      history.push({ role: 'user', content: msg, fileName: fileForMsg?.name || null });
+      history.push({ role: 'user', content: msg, fileName: fileForMsg?.name || null, imagePreview: fileForMsg?.previewUrl || null });
       history.push({ role: 'assistant', content: reply });
       saveSession();
       scrollBottom();
