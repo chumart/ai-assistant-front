@@ -864,14 +864,12 @@
       if (data.sessions && data.sessions.length > 0) {
         allSessions = data.sessions.map(s => ({ id: s.id, title: s.title, history: s.history }));
         renderSidebar();
-        loadSession(allSessions[0].id);
-      } else {
-        newChat();
       }
+      newChat(); // Always start with a fresh chat
     } catch(e) {
       const saved = localStorage.getItem('chumartChats');
       if (saved) try { allSessions = JSON.parse(saved); } catch(ex) {}
-      if (allSessions.length) loadSession(allSessions[0].id); else newChat();
+      newChat(); // Always start fresh
     }
   }
 
