@@ -308,6 +308,17 @@
   .toggle-switch input:checked + .toggle-slider { background: #111; }
   .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); }
 
+  .doc-dl-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 6px; padding: 7px 14px;
+    background: #111; color: #fff;
+    border: none; border-radius: 7px;
+    font-size: 12.5px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+    transition: background 0.15s; letter-spacing: 0.01em;
+  }
+  .doc-dl-btn:hover { background: #333; }
+
   @media (max-width: 768px) { .sidebar { display: none; } .greeting-title { font-size: 28px; } }
 </style>
 </head>
@@ -668,14 +679,17 @@
     text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
     text = text.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
     text = text.replace(/`([^`]+?)`/g, '<code style="background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:monospace">$1</code>');
-    // Markdown links [text](url) — handle signed URLs specially
+    // Document download links
     text = text.replace(/\[([^\]]+)\]\(\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
-      return `<button onclick="downloadSignedDoc('${docId}','${label}')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#111;color:#fff;border:none;border-radius:6px;font-size:12.5px;cursor:pointer;font-family:inherit;margin-top:4px">📥 ${label}</button>`;
+      let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+      if (!cleanLabel) cleanLabel = 'Download';
+      return `<button class="doc-dl-btn" onclick="downloadSignedDoc('${docId}','${label}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>${cleanLabel}</button>`;
     });
     // Regular links
-    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:#0b57d0;text-decoration:underline">$1</a>');
+    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:#111;text-decoration:underline;font-weight:500">$1</a>');
     return text;
   }
+
 
   async function downloadSignedDoc(docId, label) {
     try {
