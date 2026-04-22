@@ -913,7 +913,13 @@
 
     const payload = {
       message: msg,
-      history: history.map(({ role, content }) => ({ role, content })),
+      history: history.map(({ role, content, fileId, fileName, fileContent }) => {
+        const entry = { role, content };
+        if (fileId) entry.file_id = fileId;
+        if (fileName) entry.file_name = fileName;
+        if (fileContent) entry.file_content = fileContent;
+        return entry;
+      }),
       file_content: fileForMsg?.content || '',
       file_name: fileForMsg?.name || '',
       file_id: fileForMsg?.fileId || '',
@@ -1013,7 +1019,14 @@
       }
     } finally {
       if (fullText) {
-        history.push({ role: 'user', content: msg, fileName: fileForMsg?.name || null, imagePreview: fileForMsg?.previewUrl || null });
+        history.push({
+          role: 'user',
+          content: msg,
+          fileName: fileForMsg?.name || null,
+          imagePreview: fileForMsg?.previewUrl || null,
+          fileId: fileForMsg?.fileId || null,
+          fileContent: fileForMsg?.content || null
+        });
         history.push({ role: 'assistant', content: fullText + (stopped ? '\n\n[stopped by user]' : '') });
         saveSession();
       }
@@ -1164,8 +1177,8 @@
     history = []; msgList.innerHTML = ''; emptyEl.style.display = 'flex';
   }
 
-  // Image overlay viewer
-  function showImageOverlay(src) {
+  // Image overlay viewer — must be on window for inline onclick to work
+  window.showImageOverlay = function(src) {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer';
     overlay.innerHTML = `<img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 4px 40px rgba(0,0,0,0.5)">`;
