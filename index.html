@@ -652,7 +652,7 @@
     let fileHtml = '';
     if (fileName) {
       if (imagePreview) {
-        fileHtml = `<div style="margin-bottom:8px"><img src="${imagePreview}" style="max-width:240px;max-height:180px;border-radius:10px;border:1px solid #e8e8e8;cursor:pointer" onclick="window.open(this.src)"></div>`;
+        fileHtml = `<div style="margin-bottom:8px"><img src="${imagePreview}" style="max-width:240px;max-height:180px;border-radius:10px;border:1px solid #e8e8e8;cursor:pointer" onclick="showImageOverlay(this.src)"></div>`;
       } else {
         fileHtml = `<div class="file-attachment-bubble">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
@@ -713,8 +713,10 @@
       if (!cleanLabel) cleanLabel = 'Download';
       return `<button class="doc-dl-btn" onclick="downloadSignedDoc('${docId}','${label}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>${cleanLabel}</button>`;
     });
-    // Regular links
+    // Regular links [text](url)
     text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:#111;text-decoration:underline;font-weight:500">$1</a>');
+    // Bare URLs (not already inside an href)
+    text = text.replace(/(?<!href=["'])(?<!src=["'])(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank" style="color:#2563eb;text-decoration:underline;word-break:break-all">$1</a>');
     return text;
   }
 
@@ -1107,6 +1109,15 @@
     document.getElementById('loginUser').value = '';
     document.getElementById('loginPass').value = '';
     history = []; msgList.innerHTML = ''; emptyEl.style.display = 'flex';
+  }
+
+  // Image overlay viewer
+  function showImageOverlay(src) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer';
+    overlay.innerHTML = `<img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 4px 40px rgba(0,0,0,0.5)">`;
+    overlay.onclick = () => overlay.remove();
+    document.body.appendChild(overlay);
   }
 </script>
 </body>
