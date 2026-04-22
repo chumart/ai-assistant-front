@@ -926,7 +926,8 @@
       model: selectedModel,
       free_mode: freeMode,
       session_id: currentSessionId || '',
-      session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20)
+      session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20),
+      session_token: currentUser?.session_token || ''
     };
 
     try {
@@ -1088,9 +1089,10 @@
       const data = await res.json();
       if (data.success) {
         currentUser = { uid: data.uid, name: data.name, username: data.username,
-          role: data.role || 'guest', role_label: data.role_label || '', permissions: data.permissions || {} };
+          role: data.role || 'guest', role_label: data.role_label || '', permissions: data.permissions || {},
+          session_token: data.session_token || '' };
         sessionStorage.setItem('chumart_user', JSON.stringify(currentUser));
-        showApp();  // showApp now loads sessions from DB
+        showApp();
       } else {
         showLoginError(data.error || 'Invalid username or password.');
       }
