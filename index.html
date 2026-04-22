@@ -342,9 +342,9 @@
     <select id="modelSelect" onchange="onModelChange(this.value)"
       style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--text-primary);background:var(--bg);font-family:inherit;outline:none;cursor:pointer;appearance:none;background-image:url(&#34;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E&#34;);background-repeat:no-repeat;background-position:right 10px center">
       <optgroup label="── Claude ──">
+        <option value="claude-haiku-4-5-20251001" selected>Claude Haiku 4.5 · Fast (default)</option>
         <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
         <option value="claude-opus-4-5">Claude Opus 4.5</option>
-        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
       </optgroup>
       <optgroup label="── OpenAI GPT-5 (Latest) ──">
         <option value="gpt-5.4">GPT-5.4 · Flagship</option>
@@ -449,7 +449,7 @@
   let allSessions = [], currentSessionId = null, history = [], busy = false;
   let attachedFile = null, isUploading = false;
   let currentUser = null;
-  let selectedModel = 'claude-sonnet-4-5';
+  let selectedModel = 'claude-haiku-4-5-20251001';
   let freeMode = false;
   let currentAbortController = null;  // SSE abort controller
 
@@ -854,6 +854,7 @@
     let fullText = '';
     let gotFirstText = false;
     let stopped = false;
+    let pendingFrame = null;
 
     const payload = {
       message: msg,
@@ -914,19 +915,27 @@
               gotFirstText = true;
             }
             fullText += evt.delta || '';
-            contentEl.innerHTML = formatText(fullText);
-            scrollBottom();
+            // Throttle DOM updates via requestAnimationFrame to avoid jank
+            if (!pendingFrame) {
+              pendingFrame = requestAnimationFrame(() => {
+                contentEl.innerHTML = formatText(fullText);
+                scrollBottom();
+                pendingFrame = null;
+              });
+            }
           } else if (evt.type === 'tool_use') {
             statusEl.style.display = 'block';
             statusEl.textContent = `🔧 调用工具: ${evt.name}...`;
           } else if (evt.type === 'tool_result') {
             statusEl.textContent = `✓ ${evt.name} 完成`;
           } else if (evt.type === 'error') {
+            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
             contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') +
               `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
           } else if (evt.type === 'done') {
+            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
             statusEl.style.display = 'none';
-            // Replay the final render with extras like commission download button
+            // Final render with extras like commission download button
             if (fullText) {
               const extraBtn = buildExtraButton(fullText);
               contentEl.innerHTML = formatText(fullText) + extraBtn;
@@ -1042,8 +1051,8 @@
     if (currentUser.role !== 'admin') {
       document.getElementById('modelSelect').innerHTML = `
         <optgroup label="── Claude ──">
+          <option value="claude-haiku-4-5-20251001" selected>Claude Haiku 4.5 · Fast (default)</option>
           <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
-          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 · Fast</option>
         </optgroup>`;
     }
     if (currentUser.role === 'admin') {
@@ -1073,16 +1082,16 @@
   function doLogout() {
     sessionStorage.removeItem('chumart_user');
     currentUser = null;
-    selectedModel = 'claude-sonnet-4-5';
+    selectedModel = 'claude-haiku-4-5-20251001';
     document.getElementById('modelSelectorWrap').style.display = 'none';
     document.getElementById('modeSelectorWrap').classList.remove('visible');
     document.getElementById('freeModeToggle').checked = false;
     freeMode = false;
     document.getElementById('modelSelect').innerHTML = `
       <optgroup label="── Claude ──">
+        <option value="claude-haiku-4-5-20251001" selected>Claude Haiku 4.5 · Fast (default)</option>
         <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
         <option value="claude-opus-4-5">Claude Opus 4.5</option>
-        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
       </optgroup>
       <optgroup label="── OpenAI GPT-5 (Latest) ──">
         <option value="gpt-5.4">GPT-5.4 · Flagship</option>
@@ -1093,7 +1102,7 @@
         <option value="gpt-4o">GPT-4o</option>
         <option value="gpt-4o-mini">GPT-4o Mini</option>
       </optgroup>`;
-    selectedModel = 'claude-sonnet-4-5';
+    selectedModel = 'claude-haiku-4-5-20251001';
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('loginUser').value = '';
     document.getElementById('loginPass').value = '';
