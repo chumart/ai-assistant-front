@@ -409,7 +409,7 @@
     </div>
     <div class="chat-content">
       <div class="empty-state" id="emptyState">
-        <div class="greeting-title">Hello, Chumart 👋</div>
+        <div class="greeting-title" id="greetingTitle">Hello, Chumart 👋</div>
         <div class="greeting-sub">How can I help you today?</div>
         <div class="suggestions-grid">
           <button class="suggestion-card" onclick="quickSend('Show me recent sales orders')">📊 Recent sales orders</button>
@@ -1112,6 +1112,9 @@
     document.getElementById('userAvatar').textContent = initials;
     document.getElementById('userName').textContent = currentUser.name || currentUser.username;
     document.getElementById('roleBadge').textContent = currentUser.role_label || currentUser.role || '';
+    // Update greeting with user's first name
+    const firstName = (currentUser.name || currentUser.username || 'Chumart').split(' ')[0];
+    document.getElementById('greetingTitle').textContent = `Hello, ${firstName} 👋`;
     document.getElementById('modelSelectorWrap').style.display = 'block';
     if (currentUser.role !== 'admin') {
       document.getElementById('modelSelect').innerHTML = `
