@@ -201,6 +201,14 @@
   }
   .send-btn:hover { background: #333; }
   .send-btn:disabled { background: #ddd; color: #aaa; cursor: not-allowed; }
+  .send-btn.stop-mode { background: #e53e3e; }
+  .send-btn.stop-mode:hover { background: #c53030; }
+  .send-btn.stop-mode:disabled { background: #e53e3e; opacity: 0.6; }
+
+  .stream-status {
+    font-size: 12px; color: #999; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
   .disclaimer { font-size: 11.5px; color: var(--text-muted); margin-top: 10px; }
 
   /* Typing */
@@ -443,6 +451,7 @@
   let currentUser = null;
   let selectedModel = 'claude-sonnet-4-5';
   let freeMode = false;
+  let currentAbortController = null;  // SSE abort controller
 
   function onModelChange(val) {
     selectedModel = val;
@@ -553,7 +562,11 @@
 
   // ── Input helpers ─────────────────────────────────────────────────────────
 
-  input.addEventListener('input', () => { sendBtn.disabled = !input.value.trim() || busy || isUploading; });
+  input.addEventListener('input', () => {
+    // Don't override Stop button during streaming
+    if (busy) return;
+    sendBtn.disabled = !input.value.trim() || isUploading;
+  });
   function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
   function quickSend(t) { input.value = t; sendMessage(); }
   function scrollBottom() { msgCont.scrollTop = msgCont.scrollHeight; }
@@ -811,49 +824,177 @@
   async function sendMessage() {
     const msg = input.value.trim();
     if (!msg || busy || isUploading) return;
-    busy = true; input.value = ''; sendBtn.disabled = true;
+    busy = true; input.value = '';
+    setSendButtonMode('stop');
 
     const fileForMsg = attachedFile ? { ...attachedFile } : null;
     clearAttachment();
     renderUserMsgDOM(msg, fileForMsg?.name, fileForMsg?.previewUrl || window._pastePreview || null);
     window._pastePreview = null;
-    showTyping();
     if (!history.length) saveSession(msg);
 
+    // Create the bot message container that we'll stream into
+    hideEmpty();
+    const botRow = document.createElement('div');
+    botRow.className = 'message-wrapper bot';
+    const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
+    botRow.innerHTML = `<div class="avatar bot">${icon}</div>
+      <div class="message-content">
+        <div class="stream-status" style="font-size:12px;color:#999;margin-bottom:4px;display:none"></div>
+        <div class="stream-content"></div>
+      </div>`;
+    msgList.appendChild(botRow);
+    const statusEl = botRow.querySelector('.stream-status');
+    const contentEl = botRow.querySelector('.stream-content');
+    // Initial typing indicator inside content
+    contentEl.innerHTML = `<div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    scrollBottom();
+
+    currentAbortController = new AbortController();
+    let fullText = '';
+    let gotFirstText = false;
+    let stopped = false;
+
+    const payload = {
+      message: msg,
+      history: history.map(({ role, content }) => ({ role, content })),
+      file_content: fileForMsg?.content || '',
+      file_name: fileForMsg?.name || '',
+      file_id: fileForMsg?.fileId || '',
+      role: currentUser?.role || 'guest',
+      user_name: currentUser?.name || '',
+      user_id: currentUser?.uid || 0,
+      model: selectedModel,
+      free_mode: freeMode,
+      session_id: currentSessionId || '',
+      session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20)
+    };
+
     try {
-      const payload = {
-        message: msg,
-        history: history.map(({ role, content }) => ({ role, content })),
-        file_content: fileForMsg?.content || '',
-        file_name: fileForMsg?.name || '',
-        file_id: fileForMsg?.fileId || '',
-        role: currentUser?.role || 'guest',
-        user_name: currentUser?.name || '',
-        user_id: currentUser?.uid || 0,
-        model: selectedModel,
-        free_mode: freeMode,
-        session_id: currentSessionId || '',
-        session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20)
-      };
-      const res = await fetch(BACKEND + '/chat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const res = await fetch(BACKEND + '/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: currentAbortController.signal
       });
-      const data = await res.json();
-      removeTyping();
-      const reply = data.reply || '(No response)';
-      renderBotMsgDOM(reply, false);
-      history.push({ role: 'user', content: msg, fileName: fileForMsg?.name || null, imagePreview: fileForMsg?.previewUrl || null });
-      history.push({ role: 'assistant', content: reply });
-      saveSession();
-      scrollBottom();
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `HTTP ${res.status}`);
+        contentEl.innerHTML = `<span class="error-text">Server error: ${escHtml(errText.slice(0, 300))}</span>`;
+        return;
+      }
+      if (!res.body) {
+        contentEl.innerHTML = `<span class="error-text">Streaming not supported in this browser.</span>`;
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events: events end with \n\n
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          const rawEvent = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const dataLine = rawEvent.split('\n').find(l => l.startsWith('data: '));
+          if (!dataLine) continue;
+          let evt;
+          try { evt = JSON.parse(dataLine.slice(6)); } catch { continue; }
+
+          if (evt.type === 'text') {
+            if (!gotFirstText) {
+              contentEl.innerHTML = '';
+              statusEl.style.display = 'none';
+              gotFirstText = true;
+            }
+            fullText += evt.delta || '';
+            contentEl.innerHTML = formatText(fullText);
+            scrollBottom();
+          } else if (evt.type === 'tool_use') {
+            statusEl.style.display = 'block';
+            statusEl.textContent = `🔧 调用工具: ${evt.name}...`;
+          } else if (evt.type === 'tool_result') {
+            statusEl.textContent = `✓ ${evt.name} 完成`;
+          } else if (evt.type === 'error') {
+            contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') +
+              `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
+          } else if (evt.type === 'done') {
+            statusEl.style.display = 'none';
+            // Replay the final render with extras like commission download button
+            if (fullText) {
+              const extraBtn = buildExtraButton(fullText);
+              contentEl.innerHTML = formatText(fullText) + extraBtn;
+            }
+          }
+        }
+      }
     } catch (err) {
-      removeTyping();
-      renderBotMsgDOM('Network error: ' + err.message, true);
-      scrollBottom();
+      if (err.name === 'AbortError') {
+        stopped = true;
+        statusEl.style.display = 'none';
+        if (fullText) {
+          contentEl.innerHTML = formatText(fullText) +
+            `<div style="margin-top:8px;font-size:12px;color:#999">[已停止]</div>`;
+        } else {
+          contentEl.innerHTML = `<span style="color:#999;font-size:13px">[已停止]</span>`;
+        }
+      } else {
+        contentEl.innerHTML = `<span class="error-text">Network error: ${escHtml(err.message || String(err))}</span>`;
+      }
     } finally {
-      busy = false; sendBtn.disabled = !input.value.trim(); input.focus();
+      if (fullText) {
+        history.push({ role: 'user', content: msg, fileName: fileForMsg?.name || null, imagePreview: fileForMsg?.previewUrl || null });
+        history.push({ role: 'assistant', content: fullText + (stopped ? '\n\n[stopped by user]' : '') });
+        saveSession();
+      }
+      currentAbortController = null;
+      busy = false;
+      setSendButtonMode('send');
+      input.focus();
+      scrollBottom();
     }
+  }
+
+  function stopGeneration() {
+    if (currentAbortController) {
+      currentAbortController.abort();
+    }
+  }
+
+  function setSendButtonMode(mode) {
+    // mode: 'send' or 'stop'
+    if (mode === 'stop') {
+      sendBtn.disabled = false;
+      sendBtn.classList.add('stop-mode');
+      sendBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>`;
+      sendBtn.onclick = stopGeneration;
+      sendBtn.title = 'Stop generation';
+    } else {
+      sendBtn.classList.remove('stop-mode');
+      sendBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+      sendBtn.onclick = sendMessage;
+      sendBtn.title = 'Send';
+      sendBtn.disabled = !input.value.trim();
+    }
+  }
+
+  function buildExtraButton(text) {
+    // Extracts the commission download button logic from renderBotMsgDOM
+    const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
+    if (ymMatch && (text.includes('销售') || text.includes('commission') || text.includes('提成') || text.includes('Commission'))) {
+      const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
+      return `<a href="${BACKEND}/export/commission?year=${y}&month=${m}" target="_blank" download
+        style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Download Excel · ${y}年${m}月 Full Report</a>`;
+    }
+    return '';
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
