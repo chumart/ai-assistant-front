@@ -760,13 +760,19 @@
     text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
     text = text.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
     text = text.replace(/`([^`]+?)`/g, '<code style="background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:monospace">$1</code>');
-    // Document download links
+    // Document download links — relative path /docs/signed-url/{id}
     text = text.replace(/\[([^\]]+)\]\(\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
       let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
       if (!cleanLabel) cleanLabel = 'Download';
       return `<button class="doc-dl-btn" onclick="downloadSignedDoc('${docId}','${label}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>${cleanLabel}</button>`;
     });
-    // Regular links [text](url)
+    // Document download links — full URL https://.../docs/signed-url/{id}
+    text = text.replace(/\[([^\]]+)\]\(https?:\/\/[^)]*\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
+      let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+      if (!cleanLabel) cleanLabel = 'Download';
+      return `<button class="doc-dl-btn" onclick="downloadSignedDoc('${docId}','${label}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>${cleanLabel}</button>`;
+    });
+    // Regular links [text](url) — must come AFTER signed-url handling
     text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:#111;text-decoration:underline;font-weight:500">$1</a>');
     // Bare URLs (not already inside an href)
     text = text.replace(/(?<!href=["'])(?<!src=["'])(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank" style="color:#2563eb;text-decoration:underline;word-break:break-all">$1</a>');
@@ -775,23 +781,14 @@
 
 
   async function downloadSignedDoc(docId, label) {
-    try {
-      const res = await fetch(`${BACKEND}/docs/signed-url/${docId}`);
-      const data = await res.json();
-      if (data.url) {
-        const a = document.createElement('a');
-        a.href = data.url;
-        a.download = data.filename || label;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } else {
-        alert('Could not get download link: ' + (data.error || 'Unknown error'));
-      }
-    } catch(e) {
-      alert('Download failed: ' + e.message);
-    }
+    // Backend returns 302 redirect directly to R2 presigned URL
+    const url = `${BACKEND}/docs/signed-url/${docId}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function parseMarkdownTable(lines, startIdx) {
