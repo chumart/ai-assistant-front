@@ -728,7 +728,7 @@
     if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
       const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
       // Detect if this is for a specific salesperson (e.g. "Gene 2026年3月")
-      const spMatch = text.match(/^[#\s]*(\S+?)\s+\d{4}年\d{1,2}月/);
+      const spMatch = text.match(/(?:##\s*)?([A-Za-z][A-Za-z ]+?)\s+\d{4}\s*年\s*\d{1,2}\s*月/);
       let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
       let label = `Download Excel · ${y}年${m}月 Full Report`;
       if (spMatch && !['PART','##','2026'].includes(spMatch[1])) {
@@ -1072,7 +1072,7 @@
     const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
     if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
       const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
-      const spMatch = text.match(/^[#\s]*(\S+?)\s+\d{4}年\d{1,2}月/);
+      const spMatch = text.match(/(?:##\s*)?([A-Za-z][A-Za-z ]+?)\s+\d{4}\s*年\s*\d{1,2}\s*月/);
       let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
       let label = `Download Excel · ${y}年${m}月 Full Report`;
       if (spMatch && !['PART','##','2026'].includes(spMatch[1])) {
