@@ -722,15 +722,24 @@
     row.className = 'message-wrapper bot';
     const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
 
-    // Commission export button
+    // Commission export button — detect salesperson name if present
     let extraBtn = '';
     const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
-    if (ymMatch && (text.includes('销售') || text.includes('commission') || text.includes('提成') || text.includes('Commission'))) {
+    if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
       const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
-      extraBtn = `<a href="${BACKEND}/export/commission?year=${y}&month=${m}" target="_blank" download
+      // Detect if this is for a specific salesperson (e.g. "Gene 2026年3月")
+      const spMatch = text.match(/^[#\s]*(\S+?)\s+\d{4}年\d{1,2}月/);
+      let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
+      let label = `Download Excel · ${y}年${m}月 Full Report`;
+      if (spMatch && !['PART','##','2026'].includes(spMatch[1])) {
+        const sp = encodeURIComponent(spMatch[1]);
+        url += `&salesperson=${sp}`;
+        label = `Download Excel · ${spMatch[1]} ${y}年${m}月`;
+      }
+      extraBtn = `<a href="${url}" target="_blank" download
         style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Download Excel · ${y}年${m}月 Full Report</a>`;
+        ${label}</a>`;
     }
 
     row.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content ${isError?'error-text':''}">${formatText(text)}${extraBtn}</div>`;
@@ -1060,14 +1069,21 @@
   }
 
   function buildExtraButton(text) {
-    // Extracts the commission download button logic from renderBotMsgDOM
     const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
-    if (ymMatch && (text.includes('销售') || text.includes('commission') || text.includes('提成') || text.includes('Commission'))) {
+    if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
       const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
-      return `<a href="${BACKEND}/export/commission?year=${y}&month=${m}" target="_blank" download
+      const spMatch = text.match(/^[#\s]*(\S+?)\s+\d{4}年\d{1,2}月/);
+      let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
+      let label = `Download Excel · ${y}年${m}月 Full Report`;
+      if (spMatch && !['PART','##','2026'].includes(spMatch[1])) {
+        const sp = encodeURIComponent(spMatch[1]);
+        url += `&salesperson=${sp}`;
+        label = `Download Excel · ${spMatch[1]} ${y}年${m}月`;
+      }
+      return `<a href="${url}" target="_blank" download
         style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Download Excel · ${y}年${m}月 Full Report</a>`;
+        ${label}</a>`;
     }
     return '';
   }
