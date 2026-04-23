@@ -727,14 +727,15 @@
     const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
     if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
       const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
-      // Detect if this is for a specific salesperson (e.g. "Gene 2026年3月")
-      const spMatch = text.match(/(?:##\s*)?([A-Za-z][A-Za-z ]+?)\s+\d{4}\s*年\s*\d{1,2}\s*月/);
+      // Detect specific salesperson: match "Name 2026年" or "Name在2026年" or "Name的" patterns
+      const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|\s)\s*\d{4}\s*年/);
       let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
       let label = `Download Excel · ${y}年${m}月 Full Report`;
-      if (spMatch && !['PART','##','2026'].includes(spMatch[1])) {
-        const sp = encodeURIComponent(spMatch[1]);
+      const excludeNames = ['PART','Commission','Monthly','Report'];
+      if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售')) {
+        const sp = encodeURIComponent(spMatch[1].trim());
         url += `&salesperson=${sp}`;
-        label = `Download Excel · ${spMatch[1]} ${y}年${m}月`;
+        label = `Download Excel · ${spMatch[1].trim()} ${y}年${m}月`;
       }
       extraBtn = `<a href="${url}" target="_blank" download
         style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit">
@@ -1072,13 +1073,14 @@
     const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
     if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
       const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
-      const spMatch = text.match(/(?:##\s*)?([A-Za-z][A-Za-z ]+?)\s+\d{4}\s*年\s*\d{1,2}\s*月/);
+      const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|\s)\s*\d{4}\s*年/);
       let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
       let label = `Download Excel · ${y}年${m}月 Full Report`;
-      if (spMatch && !['PART','##','2026'].includes(spMatch[1])) {
-        const sp = encodeURIComponent(spMatch[1]);
+      const excludeNames = ['PART','Commission','Monthly','Report'];
+      if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售')) {
+        const sp = encodeURIComponent(spMatch[1].trim());
         url += `&salesperson=${sp}`;
-        label = `Download Excel · ${spMatch[1]} ${y}年${m}月`;
+        label = `Download Excel · ${spMatch[1].trim()} ${y}年${m}月`;
       }
       return `<a href="${url}" target="_blank" download
         style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit">
