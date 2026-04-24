@@ -730,7 +730,12 @@
       const btn = document.getElementById('modalConfirm');
       btn.textContent = 'Delete';
       btn.className = 'modal-confirm';
-      btn.onclick = () => { closeModal(); resolve(true); };
+      btn.onclick = () => {
+        // Clear modalResolve BEFORE closeModal so closeModal doesn't resolve(false)
+        modalResolve = null;
+        document.getElementById('modalOverlay').classList.remove('open');
+        resolve(true);
+      };
       document.getElementById('modalOverlay').classList.add('open');
     });
   }
@@ -753,8 +758,11 @@
     );
     if (!ok) return;
     try {
-      const res = await fetch(`${BACKEND}/admin/documents/${id}?admin_key=${adminKey}`, { method: 'DELETE' });
+      const url = `${BACKEND}/admin/documents/${id}?admin_key=${encodeURIComponent(adminKey)}`;
+      console.log(`[DELETE] id=${id} url=${url}`);
+      const res = await fetch(url, { method: 'DELETE' });
       const data = await res.json();
+      console.log(`[DELETE] id=${id} status=${res.status} response=`, data);
       if (data.error) { showModal('Delete failed', esc(data.error), '⚠️'); return; }
       selectedIds.delete(String(id));
       updateBulkBar();
@@ -825,11 +833,14 @@
     for (const id of ids) {
       countEl.textContent = `Deleting ${done + 1} / ${ids.length}…`;
       try {
-        const res = await fetch(`${BACKEND}/admin/documents/${id}?admin_key=${adminKey}`, { method: 'DELETE' });
+        const url = `${BACKEND}/admin/documents/${id}?admin_key=${encodeURIComponent(adminKey)}`;
+        console.log(`[BULK DELETE] ${done+1}/${ids.length} id=${id} url=${url}`);
+        const res = await fetch(url, { method: 'DELETE' });
         const data = await res.json();
-        if (data.error) failed++;
-        else { selectedIds.delete(id); }
-      } catch { failed++; }
+        console.log(`[BULK DELETE] id=${id} status=${res.status} response=`, data);
+        if (data.error) { console.error(`[BULK DELETE] FAILED id=${id}: ${data.error}`); failed++; }
+        else { selectedIds.delete(String(id)); }
+      } catch(e) { console.error(`[BULK DELETE] EXCEPTION id=${id}:`, e); failed++; }
       done++;
     }
 
