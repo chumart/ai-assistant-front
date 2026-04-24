@@ -592,7 +592,6 @@
           <div class="doc-meta">${doc.description || ''} · ${formatSize(doc.file_size)} · ${date}</div>
         </div>
         <span class="doc-badge ${badge.cls}">${badge.label}</span>
-        <span class="doc-chunks"${zeroChunks}>${doc.chunk_count} chunks</span>
         <div class="doc-actions">
           <button class="btn-chunks" onclick="openChunks('${doc.id}', '${esc(doc.original_name)}', ${doc.chunk_count})">
             ${doc.chunk_count} chunks
