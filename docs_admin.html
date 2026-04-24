@@ -134,6 +134,11 @@
     font-size: 12px; cursor: pointer; color: #dc2626; font-family: inherit; transition: all 0.15s;
   }
   .btn-delete:hover { background: #fef2f2; }
+  .btn-chunks {
+    padding: 6px 10px; background: none; border: 1px solid #e0e0e0; border-radius: 6px;
+    font-size: 12px; cursor: pointer; color: #555; font-family: inherit; transition: all 0.15s;
+  }
+  .btn-chunks:hover { background: #f4f4f4; border-color: #111; color: #111; }
 
   .empty-state { text-align: center; padding: 48px 24px; color: #888; }
   .empty-icon { font-size: 40px; margin-bottom: 12px; }
@@ -236,6 +241,79 @@
     border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;
   }
   .login-err { color: #dc2626; font-size: 13px; margin-top: 8px; display: none; }
+
+  /* Chunk drawer */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200;
+    display: none; align-items: stretch; justify-content: flex-end;
+  }
+  .drawer-overlay.open { display: flex; }
+  .drawer {
+    width: 600px; max-width: 95vw; background: #fff;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+  }
+  .drawer-header {
+    padding: 20px 24px; border-bottom: 1px solid #eee;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .drawer-title { font-size: 15px; font-weight: 600; }
+  .drawer-sub { font-size: 12px; color: #888; margin-top: 2px; }
+  .drawer-close {
+    width: 32px; height: 32px; border: none; background: #f4f4f4;
+    border-radius: 8px; cursor: pointer; font-size: 16px; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .drawer-close:hover { background: #e8e8e8; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 16px 24px; }
+  .chunk-item {
+    padding: 14px 16px; background: #fafafa; border: 1px solid #eee;
+    border-radius: 10px; margin-bottom: 10px;
+  }
+  .chunk-meta {
+    font-size: 11px; color: #aaa; margin-bottom: 8px;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .chunk-num { font-weight: 600; color: #555; font-size: 12px; }
+  .chunk-text { font-size: 13px; line-height: 1.65; color: #333; white-space: pre-wrap; word-break: break-word; }
+  .drawer-loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+
+  /* Search test */
+  .search-card {
+    background: #fff; border: 1px solid #eaeaea; border-radius: 14px;
+    padding: 24px; margin-top: 28px; margin-bottom: 32px;
+  }
+  .search-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .search-card p { font-size: 13px; color: #888; margin-bottom: 16px; }
+  .search-row { display: flex; gap: 10px; }
+  .search-input {
+    flex: 1; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 8px;
+    font-size: 14px; font-family: inherit; outline: none;
+  }
+  .search-input:focus { border-color: #111; }
+  .search-btn {
+    padding: 10px 20px; background: #111; color: #fff; border: none;
+    border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  }
+  .search-btn:hover { background: #333; }
+  .search-results { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .search-result-item {
+    padding: 14px 16px; background: #fafafa; border: 1px solid #eee; border-radius: 10px;
+  }
+  .search-result-meta {
+    display: flex; gap: 10px; align-items: center;
+    font-size: 11px; color: #888; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .score-badge { padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 11px; }
+  .score-high { background: #dcfce7; color: #166534; }
+  .score-mid  { background: #fef9c3; color: #854d0e; }
+  .score-low  { background: #f3f4f6; color: #6b7280; }
+  .search-result-text {
+    font-size: 13px; line-height: 1.65; color: #333; white-space: pre-wrap; word-break: break-word;
+    max-height: 120px; overflow: hidden;
+  }
+  .search-result-text.expanded { max-height: none; }
+  .expand-btn { font-size: 12px; color: #0b57d0; cursor: pointer; background: none; border: none; padding: 4px 0; font-family: inherit; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -360,6 +438,42 @@
   </div>
 </div>
 
+<!-- Search Test Card -->
+<div class="container" style="padding-top:0">
+  <div class="search-card">
+    <h3>Search Test</h3>
+    <p>输入问题，看知识库能找到哪些相关 chunks。用于调试文档是否被正确索引。</p>
+    <div class="search-row">
+      <input type="text" class="search-input" id="searchInput"
+        placeholder="e.g. How to clean the evaporator coil?"
+        onkeydown="if(event.key==='Enter')runSearch()">
+      <select id="searchLimit" style="padding:10px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fafafa;">
+        <option value="5">Top 5</option>
+        <option value="10">Top 10</option>
+        <option value="20">Top 20</option>
+      </select>
+      <button class="search-btn" onclick="runSearch()">Search</button>
+    </div>
+    <div id="searchResults"></div>
+  </div>
+</div>
+
+<!-- Chunk Drawer -->
+<div class="drawer-overlay" id="chunkDrawer" onclick="if(event.target===this)closeChunks()">
+  <div class="drawer">
+    <div class="drawer-header">
+      <div>
+        <div class="drawer-title" id="drawerTitle">Document Chunks</div>
+        <div class="drawer-sub" id="drawerSub"></div>
+      </div>
+      <button class="drawer-close" onclick="closeChunks()">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody">
+      <div class="drawer-loading">Loading chunks…</div>
+    </div>
+  </div>
+</div>
+
 <script>
   const BACKEND = 'https://chumart-ai.up.railway.app';
   let adminKey = '';
@@ -480,6 +594,9 @@
         <span class="doc-badge ${badge.cls}">${badge.label}</span>
         <span class="doc-chunks"${zeroChunks}>${doc.chunk_count} chunks</span>
         <div class="doc-actions">
+          <button class="btn-chunks" onclick="openChunks('${doc.id}', '${esc(doc.original_name)}', ${doc.chunk_count})">
+            ${doc.chunk_count} chunks
+          </button>
           <a href="${doc.public_url}" target="_blank" class="btn-download">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download
@@ -732,6 +849,73 @@
     el.className = `alert ${type}`;
     el.style.display = 'block';
     if (type === 'success') setTimeout(() => el.style.display = 'none', 8000);
+  }
+
+  // ── Chunk Drawer ──────────────────────────────────────────────
+  async function openChunks(docId, docName, chunkCount) {
+    document.getElementById('drawerTitle').textContent = docName;
+    document.getElementById('drawerSub').textContent = `${chunkCount} chunks · doc:${docId}`;
+    document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Loading chunks…</div>';
+    document.getElementById('chunkDrawer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    try {
+      const res = await fetch(`${BACKEND}/admin/documents/${docId}/chunks?admin_key=${encodeURIComponent(adminKey)}`);
+      const data = await res.json();
+      if (data.error) { document.getElementById('drawerBody').innerHTML = `<div class="drawer-loading" style="color:#dc2626">Error: ${esc(data.error)}</div>`; return; }
+      if (!data.chunks || !data.chunks.length) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">No chunks found for this document.</div>'; return; }
+      document.getElementById('drawerBody').innerHTML = data.chunks.map(c => `
+        <div class="chunk-item">
+          <div class="chunk-meta">
+            <span class="chunk-num">#${c.index}</span>
+            <span>${c.char_count} chars</span>
+            ${c.category ? `<span>${esc(c.category)}</span>` : ''}
+          </div>
+          <div class="chunk-text">${esc(c.text)}</div>
+        </div>`).join('');
+    } catch(e) {
+      document.getElementById('drawerBody').innerHTML = `<div class="drawer-loading" style="color:#dc2626">Failed: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function closeChunks() {
+    document.getElementById('chunkDrawer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // ── Search Test ───────────────────────────────────────────────
+  async function runSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    const limit = document.getElementById('searchLimit').value;
+    const container = document.getElementById('searchResults');
+    container.innerHTML = '<div style="font-size:13px;color:#aaa;padding:12px 0">Searching…</div>';
+    try {
+      const res = await fetch(`${BACKEND}/admin/kb-search?q=${encodeURIComponent(q)}&limit=${limit}&admin_key=${encodeURIComponent(adminKey)}`);
+      const data = await res.json();
+      if (data.error) { container.innerHTML = `<div style="font-size:13px;color:#dc2626;padding:12px 0">Error: ${esc(data.error)}</div>`; return; }
+      if (!data.results || !data.results.length) { container.innerHTML = '<div style="font-size:13px;color:#aaa;padding:12px 0">No results found.</div>'; return; }
+      container.innerHTML = `
+        <div style="font-size:12px;color:#888;padding:8px 0 4px">Found ${data.results.length} results for "<strong>${esc(q)}</strong>"</div>
+        <div class="search-results">
+          ${data.results.map((r, i) => {
+            const pct = Math.round(r.score * 100);
+            const cls = pct >= 75 ? 'score-high' : pct >= 50 ? 'score-mid' : 'score-low';
+            const tid = `srt_${i}`;
+            return `<div class="search-result-item">
+              <div class="search-result-meta">
+                <span class="score-badge ${cls}">${pct}% match</span>
+                <span>${esc(r.site_name || '')}</span>
+                ${r.category ? `<span>${esc(r.category)}</span>` : ''}
+                ${r.doc_id ? `<button class="expand-btn" style="margin-left:auto" onclick="openChunks('${r.doc_id}','${esc(r.site_name||r.doc_id)}',0)">View all chunks →</button>` : ''}
+              </div>
+              <div class="search-result-text" id="${tid}">${esc(r.text)}</div>
+              <button class="expand-btn" onclick="const el=document.getElementById('${tid}');el.classList.toggle('expanded');this.textContent=el.classList.contains('expanded')?'Show less':'Show more'">Show more</button>
+            </div>`;
+          }).join('')}
+        </div>`;
+    } catch(e) {
+      container.innerHTML = `<div style="font-size:13px;color:#dc2626;padding:12px 0">Failed: ${esc(e.message)}</div>`;
+    }
   }
 
   function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
