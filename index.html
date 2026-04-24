@@ -932,6 +932,161 @@
     let stopped = false;
     let pendingFrame = null;
 
+    // ─── Progress narration: evolves the status message as a tool call takes longer ───
+    // Stages: [ [minSec, suffix], ... ]  — suffix is appended after "{toolName}".
+    // Empty suffix = just "{toolName}...".
+    const TOOL_STAGES = {
+      'odoo_search': [
+        [0,  ''],
+        [3,  ' — querying Odoo'],
+        [10, ' — scanning records'],
+        [20, ' — filtering large dataset'],
+        [40, ' — still working, complex query'],
+        [80, ' — hang tight, almost there']
+      ],
+      'odoo_search_products_by_sku': [
+        [0,  ''],
+        [3,  ' — looking up SKUs in Odoo'],
+        [10, ' — matching many products'],
+        [25, ' — large SKU batch, still searching'],
+        [60, ' — hang tight']
+      ],
+      'odoo_get_product_vendors': [
+        [0,  ''],
+        [5,  ' — pulling vendor data'],
+        [15, ' — this is a lot of vendors'],
+        [40, ' — still at it']
+      ],
+      'odoo_update_vendor_price': [
+        [0,  ''],
+        [3,  ' — resolving products'],
+        [8,  ' — looking up supplier records'],
+        [15, ' — writing prices to Odoo'],
+        [30, ' — large update, still writing']
+      ],
+      'odoo_create_bulk_po': [
+        [0,  ''],
+        [3,  ' — building purchase orders'],
+        [10, ' — creating order lines'],
+        [25, ' — validating vendors and products'],
+        [50, ' — nearly done']
+      ],
+      'odoo_write_record': [
+        [0,  ''],
+        [5,  ' — saving to Odoo'],
+        [15, ' — Odoo is slow today']
+      ],
+      'odoo_create_record': [
+        [0,  ''],
+        [5,  ' — creating record in Odoo'],
+        [15, ' — Odoo is slow today']
+      ],
+      'get_monthly_tax': [
+        [0,  ''],
+        [3,  ' — aggregating invoices'],
+        [10, ' — computing tax breakdown'],
+        [25, ' — large month, still crunching']
+      ],
+      'get_quarterly_tax': [
+        [0,  ''],
+        [3,  ' — aggregating quarterly invoices'],
+        [12, ' — computing tax breakdown'],
+        [30, ' — big quarter, still crunching']
+      ],
+      'get_monthly_sales': [
+        [0,  ''],
+        [3,  ' — pulling sales records'],
+        [10, ' — computing commissions'],
+        [25, ' — lots of salespeople, still working']
+      ],
+      'get_missing_tax': [
+        [0,  ''],
+        [3,  ' — scanning CA invoices for missing tax'],
+        [12, ' — deep scan in progress']
+      ],
+      'search_knowledge': [
+        [0,  ''],
+        [3,  ' — searching document library'],
+        [10, ' — ranking passages']
+      ],
+      'web_fetch': [
+        [0,  ''],
+        [3,  ' — fetching page'],
+        [10, ' — parsing content'],
+        [25, ' — slow site, still waiting']
+      ],
+      'web_search': [
+        [0,  ''],
+        [3,  ' — searching the web'],
+        [10, ' — ranking results']
+      ],
+      // Fallback for any tool not listed above
+      '_default': [
+        [0,  ''],
+        [5,  ' — working'],
+        [15, ' — still working'],
+        [30, ' — this is taking a while'],
+        [60, ' — hang tight']
+      ]
+    };
+
+    // Stages for the "thinking" phase (between tool_result and next tool_use or text).
+    const THINKING_STAGES = [
+      [0,  'thinking'],
+      [5,  'thinking — analyzing results'],
+      [15, 'thinking — large result set, organizing'],
+      [30, 'thinking — this is a complex one'],
+      [60, 'thinking — hang tight']
+    ];
+
+    function pickStage(stages, elapsedSec) {
+      let pick = stages[0];
+      for (const s of stages) {
+        if (elapsedSec >= s[0]) pick = s;
+        else break;
+      }
+      return pick;
+    }
+
+    let statusPhase = null;     // 'tool' | 'thinking' | null
+    let statusTool = '';         // tool name during 'tool' phase
+    let statusStartedAt = 0;     // timestamp when current phase started
+    let statusTimer = null;
+
+    function renderStatus() {
+      if (statusPhase === null) {
+        statusEl.style.display = 'none';
+        return;
+      }
+      statusEl.style.display = 'flex';
+      const elapsed = (Date.now() - statusStartedAt) / 1000;
+      if (statusPhase === 'tool') {
+        const stages = TOOL_STAGES[statusTool] || TOOL_STAGES._default;
+        const [, suffix] = pickStage(stages, elapsed);
+        statusEl.innerHTML =
+          `${escHtml(statusTool)}${escHtml(suffix)}<span class="dots-loading"></span>`;
+      } else if (statusPhase === 'thinking') {
+        const [, label] = pickStage(THINKING_STAGES, elapsed);
+        statusEl.innerHTML = `${escHtml(label)}<span class="dots-loading"></span>`;
+      }
+    }
+
+    function startStatus(phase, toolName) {
+      statusPhase = phase;
+      statusTool = toolName || '';
+      statusStartedAt = Date.now();
+      renderStatus();
+      if (statusTimer) clearInterval(statusTimer);
+      // Re-render every second so stage messages advance even when no new SSE event arrives
+      statusTimer = setInterval(renderStatus, 1000);
+    }
+
+    function stopStatus() {
+      statusPhase = null;
+      if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+      statusEl.style.display = 'none';
+    }
+
     const payload = {
       message: msg,
       history: history.map(({ role, content, fileId, fileName, fileContent }) => {
@@ -1008,27 +1163,24 @@
               });
             }
           } else if (evt.type === 'tool_use') {
-            // Minimal UI: just tool name + animated dots. No prefix, no emoji,
-            // no hardcoded language — the tool name is language-neutral.
-            statusEl.style.display = 'flex';
-            statusEl.innerHTML =
-              `${escHtml(evt.name || '')}<span class="dots-loading"></span>`;
+            // Start the "tool" status phase — renderStatus will keep advancing
+            // the stage message each second based on elapsed time.
+            startStatus('tool', evt.name || '');
           } else if (evt.type === 'tool_result') {
-            // Tool finished. Keep the bar visible but switch to a neutral
-            // "thinking" indicator — the AI is now analyzing the result and
-            // may start streaming text or call another tool next.
-            statusEl.style.display = 'flex';
-            statusEl.innerHTML = `thinking<span class="dots-loading"></span>`;
+            // Tool finished. Switch to the "thinking" phase and restart the clock.
+            // The AI is now analyzing the result and may start streaming text
+            // or call another tool next.
+            startStatus('thinking');
           } else if (evt.type === 'ping') {
             // Server heartbeat: no UI change needed.
           } else if (evt.type === 'error') {
             if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
-            statusEl.style.display = 'none';
+            stopStatus();
             contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') +
               `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
           } else if (evt.type === 'done') {
             if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
-            statusEl.style.display = 'none';
+            stopStatus();
             // Final render with extras like commission download button
             if (fullText) {
               const extraBtn = buildExtraButton(fullText);
@@ -1040,7 +1192,7 @@
     } catch (err) {
       if (err.name === 'AbortError') {
         stopped = true;
-        statusEl.style.display = 'none';
+        stopStatus();
         if (fullText) {
           contentEl.innerHTML = formatText(fullText) +
             `<div style="margin-top:8px;font-size:12px;color:#999">[已停止]</div>`;
@@ -1048,9 +1200,11 @@
           contentEl.innerHTML = `<span style="color:#999;font-size:13px">[已停止]</span>`;
         }
       } else {
+        stopStatus();
         contentEl.innerHTML = `<span class="error-text">Network error: ${escHtml(err.message || String(err))}</span>`;
       }
     } finally {
+      stopStatus();
       if (fullText) {
         history.push({
           role: 'user',
