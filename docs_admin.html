@@ -134,101 +134,70 @@
     font-size: 12px; cursor: pointer; color: #dc2626; font-family: inherit; transition: all 0.15s;
   }
   .btn-delete:hover { background: #fef2f2; }
-  .btn-chunks {
-    padding: 6px 10px; background: none; border: 1px solid #e0e0e0; border-radius: 6px;
-    font-size: 12px; cursor: pointer; color: #555; font-family: inherit; transition: all 0.15s;
-  }
-  .btn-chunks:hover { background: #f4f4f4; border-color: #111; color: #111; }
-
-  /* Chunk drawer */
-  .drawer-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200;
-    display: none; align-items: stretch; justify-content: flex-end;
-  }
-  .drawer-overlay.open { display: flex; }
-  .drawer {
-    width: 600px; max-width: 95vw; background: #fff;
-    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-  }
-  .drawer-header {
-    padding: 20px 24px; border-bottom: 1px solid #eee;
-    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
-  }
-  .drawer-title { font-size: 15px; font-weight: 600; }
-  .drawer-sub { font-size: 12px; color: #888; margin-top: 2px; }
-  .drawer-close {
-    width: 32px; height: 32px; border: none; background: #f4f4f4;
-    border-radius: 8px; cursor: pointer; font-size: 16px; display: flex;
-    align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .drawer-close:hover { background: #e8e8e8; }
-  .drawer-body { flex: 1; overflow-y: auto; padding: 16px 24px; }
-  .chunk-item {
-    padding: 14px 16px; background: #fafafa; border: 1px solid #eee;
-    border-radius: 10px; margin-bottom: 10px;
-  }
-  .chunk-meta {
-    font-size: 11px; color: #aaa; margin-bottom: 8px;
-    display: flex; gap: 12px; align-items: center;
-  }
-  .chunk-num { font-weight: 600; color: #555; font-size: 12px; }
-  .chunk-text {
-    font-size: 13px; line-height: 1.65; color: #333;
-    white-space: pre-wrap; word-break: break-word;
-  }
-  .drawer-loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
-
-  /* Search test card */
-  .search-card {
-    background: #fff; border: 1px solid #eaeaea; border-radius: 14px;
-    padding: 24px; margin-top: 28px;
-  }
-  .search-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-  .search-card p { font-size: 13px; color: #888; margin-bottom: 16px; }
-  .search-row { display: flex; gap: 10px; }
-  .search-input {
-    flex: 1; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 8px;
-    font-size: 14px; font-family: inherit; outline: none;
-  }
-  .search-input:focus { border-color: #111; }
-  .search-btn {
-    padding: 10px 20px; background: #111; color: #fff; border: none;
-    border-radius: 8px; font-size: 13px; font-weight: 500;
-    cursor: pointer; font-family: inherit; white-space: nowrap;
-  }
-  .search-btn:hover { background: #333; }
-  .search-results { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-  .search-result-item {
-    padding: 14px 16px; background: #fafafa; border: 1px solid #eee;
-    border-radius: 10px;
-  }
-  .search-result-meta {
-    display: flex; gap: 10px; align-items: center;
-    font-size: 11px; color: #888; margin-bottom: 8px; flex-wrap: wrap;
-  }
-  .score-badge {
-    padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 11px;
-  }
-  .score-high { background: #dcfce7; color: #166534; }
-  .score-mid  { background: #fef9c3; color: #854d0e; }
-  .score-low  { background: #f3f4f6; color: #6b7280; }
-  .search-result-text {
-    font-size: 13px; line-height: 1.65; color: #333;
-    white-space: pre-wrap; word-break: break-word;
-    max-height: 120px; overflow: hidden; position: relative;
-  }
-  .search-result-text.expanded { max-height: none; }
-  .expand-btn {
-    font-size: 12px; color: #0b57d0; cursor: pointer; background: none;
-    border: none; padding: 4px 0; font-family: inherit; margin-top: 4px;
-  }
 
   .empty-state { text-align: center; padding: 48px 24px; color: #888; }
   .empty-icon { font-size: 40px; margin-bottom: 12px; }
   .empty-text { font-size: 14px; }
 
   .loading { text-align: center; padding: 32px; color: #888; font-size: 14px; }
+
+  /* Batch select */
+  .doc-checkbox { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; accent-color: #111; }
+  .bulk-bar {
+    display: none; align-items: center; gap: 12px;
+    padding: 10px 24px; background: #f8f8f8; border-bottom: 1px solid #eee;
+    font-size: 13px;
+  }
+  .bulk-bar.visible { display: flex; }
+  .bulk-count { color: #555; flex: 1; }
+  .btn-bulk-delete {
+    padding: 7px 14px; background: #dc2626; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
+    font-family: inherit; transition: background 0.15s;
+  }
+  .btn-bulk-delete:hover { background: #b91c1c; }
+  .btn-bulk-cancel {
+    padding: 7px 14px; background: none; border: 1px solid #ddd; color: #555;
+    border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .btn-bulk-cancel:hover { background: #f4f4f4; }
+  .select-all-wrap {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #888; padding: 8px 24px 4px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  /* Custom confirm dialog */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.25);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 300; opacity: 0; pointer-events: none;
+    transition: opacity 0.15s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: #fff; border-radius: 14px; padding: 28px 28px 24px;
+    width: 380px; max-width: 90vw;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    transform: scale(0.96); transition: transform 0.15s;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal-icon { font-size: 28px; margin-bottom: 12px; }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .modal-body { font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 22px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-cancel {
+    padding: 9px 18px; background: #f4f4f4; border: none; border-radius: 8px;
+    font-size: 13px; cursor: pointer; font-family: inherit; color: #333;
+  }
+  .modal-cancel:hover { background: #e8e8e8; }
+  .modal-confirm {
+    padding: 9px 18px; background: #dc2626; color: #fff; border: none;
+    border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: inherit; transition: background 0.15s;
+  }
+  .modal-confirm:hover { background: #b91c1c; }
+  .modal-confirm.loading-btn { background: #aaa; cursor: not-allowed; }
 
   /* Batch upload queue */
   .batch-queue { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -363,40 +332,30 @@
         <button class="filter-btn" onclick="filterDocs('general', this)">📄 General</button>
       </div>
     </div>
-    <div id="docList"><div class="loading">Loading documents…</div></div>
-  </div>
-
-  <!-- Search Test Card -->
-  <div class="search-card">
-    <h3>Search Test</h3>
-    <p>输入问题，看知识库能找到哪些相关 chunks。用于调试文档是否被正确索引。</p>
-    <div class="search-row">
-      <input type="text" class="search-input" id="searchInput"
-        placeholder="e.g. How to clean the evaporator coil?"
-        onkeydown="if(event.key==='Enter')runSearch()">
-      <select id="searchLimit" style="padding:10px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fafafa;">
-        <option value="5">Top 5</option>
-        <option value="10">Top 10</option>
-        <option value="20">Top 20</option>
-      </select>
-      <button class="search-btn" onclick="runSearch()">Search</button>
+    <!-- Bulk action bar — shown when ≥1 doc is selected -->
+    <div class="bulk-bar" id="bulkBar">
+      <span class="bulk-count" id="bulkCount">0 selected</span>
+      <button class="btn-bulk-cancel" onclick="clearSelection()">Cancel</button>
+      <button class="btn-bulk-delete" onclick="bulkDelete()">Delete selected</button>
     </div>
-    <div id="searchResults"></div>
+    <!-- Select-all row — shown only when docs are rendered -->
+    <div class="select-all-wrap" id="selectAllWrap" style="display:none">
+      <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this.checked)">
+      <label for="selectAllChk" style="cursor:pointer">Select all</label>
+    </div>
+    <div id="docList"><div class="loading">Loading documents…</div></div>
   </div>
 </div>
 
-<!-- Chunk Drawer -->
-<div class="drawer-overlay" id="chunkDrawer" onclick="if(event.target===this)closeChunks()">
-  <div class="drawer">
-    <div class="drawer-header">
-      <div>
-        <div class="drawer-title" id="drawerTitle">Document Chunks</div>
-        <div class="drawer-sub" id="drawerSub"></div>
-      </div>
-      <button class="drawer-close" onclick="closeChunks()">✕</button>
-    </div>
-    <div class="drawer-body" id="drawerBody">
-      <div class="drawer-loading">Loading chunks…</div>
+<!-- Custom confirm / alert modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-icon" id="modalIcon">🗑️</div>
+    <div class="modal-title" id="modalTitle">Confirm delete</div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-confirm" id="modalConfirm">Delete</button>
     </div>
   </div>
 </div>
@@ -406,15 +365,18 @@
   let adminKey = '';
   let allDocs = [];
   let currentFilter = 'all';
-  let fileQueue = []; // [{file, id}]
+  let fileQueue = [];
+  let selectedIds = new Set(); // for batch delete
 
+  // ── Login: persist key in sessionStorage so refresh doesn't log out ──
+  // sessionStorage survives page refresh but clears when tab is closed.
   function checkAdminKey() {
     const key = document.getElementById('adminKeyInput').value;
     if (!key) return;
     adminKey = key;
-    // Try loading docs to verify key
     loadDocs().then(ok => {
       if (ok) {
+        sessionStorage.setItem('lib_admin_key', adminKey);
         document.getElementById('loginOverlay').style.display = 'none';
       } else {
         document.getElementById('loginErr').style.display = 'block';
@@ -422,6 +384,21 @@
       }
     });
   }
+
+  // On page load: try to restore key from sessionStorage
+  (function restoreSession() {
+    const saved = sessionStorage.getItem('lib_admin_key');
+    if (!saved) return;
+    adminKey = saved;
+    loadDocs().then(ok => {
+      if (ok) {
+        document.getElementById('loginOverlay').style.display = 'none';
+      } else {
+        adminKey = '';
+        sessionStorage.removeItem('lib_admin_key');
+      }
+    });
+  })();
 
   async function loadDocs() {
     try {
@@ -478,6 +455,9 @@
     const list = document.getElementById('docList');
     const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.category === currentFilter);
 
+    document.getElementById('selectAllWrap').style.display = filtered.length ? 'flex' : 'none';
+    document.getElementById('selectAllChk').checked = false;
+
     if (!filtered.length) {
       list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No documents yet. Upload your first document above.</div></div>`;
       return;
@@ -487,17 +467,19 @@
       const icon = getDocIcon(doc.original_name);
       const badge = getBadge(doc.category);
       const date = new Date(doc.created_at).toLocaleDateString();
-      return `<div class="doc-item">
+      const checked = selectedIds.has(doc.id) ? 'checked' : '';
+      const zeroChunks = doc.chunk_count === 0 ? ' style="color:#dc2626;font-weight:600"' : '';
+      return `<div class="doc-item" id="doc_${doc.id}">
+        <input type="checkbox" class="doc-checkbox" ${checked}
+          onchange="toggleSelect('${doc.id}', this.checked)">
         <div class="doc-icon ${icon.cls}">${icon.emoji}</div>
         <div class="doc-info">
           <div class="doc-name">${esc(doc.original_name)}</div>
           <div class="doc-meta">${doc.description || ''} · ${formatSize(doc.file_size)} · ${date}</div>
         </div>
         <span class="doc-badge ${badge.cls}">${badge.label}</span>
+        <span class="doc-chunks"${zeroChunks}>${doc.chunk_count} chunks</span>
         <div class="doc-actions">
-          <button class="btn-chunks" onclick="openChunks('${doc.id}', '${esc(doc.original_name)}', ${doc.chunk_count})">
-            ${doc.chunk_count} chunks
-          </button>
           <a href="${doc.public_url}" target="_blank" class="btn-download">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download
@@ -620,15 +602,127 @@
     setTimeout(() => loadDocs(), 4000);
   }
 
+  // ── Custom modal ──────────────────────────────────────────────
+  let modalResolve = null;
+
+  function showModal(title, body, icon = '🗑️') {
+    return new Promise(resolve => {
+      modalResolve = resolve;
+      document.getElementById('modalIcon').textContent = icon;
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalBody').innerHTML = body;
+      const btn = document.getElementById('modalConfirm');
+      btn.textContent = 'Delete';
+      btn.className = 'modal-confirm';
+      btn.onclick = () => { closeModal(); resolve(true); };
+      document.getElementById('modalOverlay').classList.add('open');
+    });
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    if (modalResolve) { modalResolve(false); modalResolve = null; }
+  }
+
+  // Close on overlay click
+  document.getElementById('modalOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  });
+
+  // ── Single delete ──────────────────────────────────────────────
   async function deleteDoc(id, name) {
-    if (!confirm(`Delete "${name}"?\nThis will remove the file and all its knowledge base entries.`)) return;
+    const ok = await showModal(
+      'Delete document?',
+      `<strong>${esc(name)}</strong><br><br>This will remove the file and all its knowledge base chunks. This cannot be undone.`
+    );
+    if (!ok) return;
     try {
       const res = await fetch(`${BACKEND}/admin/documents/${id}?admin_key=${adminKey}`, { method: 'DELETE' });
       const data = await res.json();
-      if (data.error) { alert('Delete failed: ' + data.error); return; }
+      if (data.error) { showModal('Delete failed', esc(data.error), '⚠️'); return; }
+      selectedIds.delete(id);
+      updateBulkBar();
       await loadDocs();
     } catch(e) {
-      alert('Delete failed: ' + e.message);
+      showModal('Delete failed', esc(e.message), '⚠️');
+    }
+  }
+
+  // ── Batch select ───────────────────────────────────────────────
+  function toggleSelect(id, checked) {
+    if (checked) selectedIds.add(id);
+    else selectedIds.delete(id);
+    updateBulkBar();
+    // Sync select-all checkbox
+    const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.category === currentFilter);
+    document.getElementById('selectAllChk').checked =
+      filtered.length > 0 && filtered.every(d => selectedIds.has(d.id));
+  }
+
+  function toggleSelectAll(checked) {
+    const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.category === currentFilter);
+    filtered.forEach(d => {
+      if (checked) selectedIds.add(d.id);
+      else selectedIds.delete(d.id);
+    });
+    renderDocs();
+    updateBulkBar();
+  }
+
+  function clearSelection() {
+    selectedIds.clear();
+    renderDocs();
+    updateBulkBar();
+  }
+
+  function updateBulkBar() {
+    const bar = document.getElementById('bulkBar');
+    const count = selectedIds.size;
+    if (count > 0) {
+      bar.classList.add('visible');
+      document.getElementById('bulkCount').textContent = `${count} selected`;
+    } else {
+      bar.classList.remove('visible');
+    }
+  }
+
+  // ── Batch delete ───────────────────────────────────────────────
+  async function bulkDelete() {
+    const count = selectedIds.size;
+    if (!count) return;
+    const names = allDocs.filter(d => selectedIds.has(d.id)).map(d => d.original_name);
+    const preview = names.slice(0, 5).map(n => `• ${esc(n)}`).join('<br>');
+    const more = names.length > 5 ? `<br><em>…and ${names.length - 5} more</em>` : '';
+
+    const ok = await showModal(
+      `Delete ${count} document${count > 1 ? 's' : ''}?`,
+      `${preview}${more}<br><br>All knowledge base chunks will be removed. This cannot be undone.`
+    );
+    if (!ok) return;
+
+    const btn = document.getElementById('modalConfirm');
+    btn.textContent = 'Deleting…';
+    btn.className = 'modal-confirm loading-btn';
+    btn.onclick = null;
+    document.getElementById('modalOverlay').classList.add('open');
+
+    const ids = [...selectedIds];
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch(`${BACKEND}/admin/documents/${id}?admin_key=${adminKey}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.error) failed++;
+        else selectedIds.delete(id);
+      } catch { failed++; }
+    }
+
+    closeModal();
+    updateBulkBar();
+    await loadDocs();
+
+    if (failed > 0) {
+      showModal('Partial failure', `${ids.length - failed} deleted, ${failed} failed.`, '⚠️');
     }
   }
 
@@ -641,99 +735,6 @@
   }
 
   function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-  // ── Chunk Drawer ──────────────────────────────────────────────
-  async function openChunks(docId, docName, chunkCount) {
-    document.getElementById('drawerTitle').textContent = docName;
-    document.getElementById('drawerSub').textContent = `${chunkCount} chunks · doc:${docId}`;
-    document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Loading chunks…</div>';
-    document.getElementById('chunkDrawer').classList.add('open');
-    document.body.style.overflow = 'hidden';
-
-    try {
-      const res = await fetch(`${BACKEND}/admin/documents/${docId}/chunks?admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error) {
-        document.getElementById('drawerBody').innerHTML = `<div class="drawer-loading" style="color:#dc2626">Error: ${esc(data.error)}</div>`;
-        return;
-      }
-      if (!data.chunks || !data.chunks.length) {
-        document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">No chunks found for this document.</div>';
-        return;
-      }
-      document.getElementById('drawerBody').innerHTML = data.chunks.map(c => `
-        <div class="chunk-item">
-          <div class="chunk-meta">
-            <span class="chunk-num">#${c.index}</span>
-            <span>${c.char_count} chars</span>
-            ${c.category ? `<span>${esc(c.category)}</span>` : ''}
-            ${c.page_title && c.page_title !== docName ? `<span>${esc(c.page_title)}</span>` : ''}
-          </div>
-          <div class="chunk-text">${esc(c.text)}</div>
-        </div>
-      `).join('');
-    } catch(e) {
-      document.getElementById('drawerBody').innerHTML = `<div class="drawer-loading" style="color:#dc2626">Failed: ${esc(e.message)}</div>`;
-    }
-  }
-
-  function closeChunks() {
-    document.getElementById('chunkDrawer').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  // ── Search Test ───────────────────────────────────────────────
-  async function runSearch() {
-    const q = document.getElementById('searchInput').value.trim();
-    if (!q) return;
-    const limit = document.getElementById('searchLimit').value;
-    const container = document.getElementById('searchResults');
-    container.innerHTML = '<div style="font-size:13px;color:#aaa;padding:12px 0">Searching…</div>';
-
-    try {
-      const res = await fetch(`${BACKEND}/admin/kb-search?q=${encodeURIComponent(q)}&limit=${limit}&admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error) {
-        container.innerHTML = `<div style="font-size:13px;color:#dc2626;padding:12px 0">Error: ${esc(data.error)}</div>`;
-        return;
-      }
-      if (!data.results || !data.results.length) {
-        container.innerHTML = '<div style="font-size:13px;color:#aaa;padding:12px 0">No results found.</div>';
-        return;
-      }
-      container.innerHTML = `
-        <div style="font-size:12px;color:#888;padding:8px 0 4px">
-          Found ${data.results.length} results for "<strong>${esc(q)}</strong>"
-        </div>
-        <div class="search-results">
-          ${data.results.map((r, i) => {
-            const scorePct = Math.round(r.score * 100);
-            const scoreClass = scorePct >= 75 ? 'score-high' : scorePct >= 50 ? 'score-mid' : 'score-low';
-            const textId = `srt_${i}`;
-            return `
-              <div class="search-result-item">
-                <div class="search-result-meta">
-                  <span class="score-badge ${scoreClass}">${scorePct}% match</span>
-                  <span>${esc(r.site_name || '')}</span>
-                  ${r.category ? `<span>${esc(r.category)}</span>` : ''}
-                  ${r.page_title ? `<span>${esc(r.page_title)}</span>` : ''}
-                  ${r.doc_id ? `<button class="expand-btn" style="margin-left:auto" onclick="openChunks('${r.doc_id}','${esc(r.site_name || r.doc_id)}',0)">View all chunks →</button>` : ''}
-                </div>
-                <div class="search-result-text" id="${textId}">${esc(r.text)}</div>
-                <button class="expand-btn" onclick="
-                  const el=document.getElementById('${textId}');
-                  el.classList.toggle('expanded');
-                  this.textContent=el.classList.contains('expanded')?'Show less':'Show more';
-                ">Show more</button>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    } catch(e) {
-      container.innerHTML = `<div style="font-size:13px;color:#dc2626;padding:12px 0">Failed: ${esc(e.message)}</div>`;
-    }
-  }
 </script>
 </body>
 </html>
