@@ -816,24 +816,22 @@
     );
     if (!ok) return;
 
-    const btn = document.getElementById('modalConfirm');
-    btn.textContent = 'Deleting…';
-    btn.className = 'modal-confirm loading-btn';
-    btn.onclick = null;
-    document.getElementById('modalOverlay').classList.add('open');
-
+    // Show progress in bulk bar while deleting (don't reopen the modal)
+    const countEl = document.getElementById('bulkCount');
     const ids = [...selectedIds];
-    let failed = 0;
+    let done = 0, failed = 0;
+
     for (const id of ids) {
+      countEl.textContent = `Deleting ${done + 1} / ${ids.length}…`;
       try {
         const res = await fetch(`${BACKEND}/admin/documents/${id}?admin_key=${adminKey}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.error) failed++;
-        else selectedIds.delete(id);
+        else { selectedIds.delete(id); }
       } catch { failed++; }
+      done++;
     }
 
-    closeModal();
     updateBulkBar();
     await loadDocs();
 
