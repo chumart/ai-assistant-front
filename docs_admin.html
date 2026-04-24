@@ -581,7 +581,7 @@
       const icon = getDocIcon(doc.original_name);
       const badge = getBadge(doc.category);
       const date = new Date(doc.created_at).toLocaleDateString();
-      const checked = selectedIds.has(doc.id) ? 'checked' : '';
+      const checked = selectedIds.has(String(doc.id)) ? 'checked' : '';
       const zeroChunks = doc.chunk_count === 0 ? ' style="color:#dc2626;font-weight:600"' : '';
       return `<div class="doc-item" id="doc_${doc.id}">
         <input type="checkbox" class="doc-checkbox" ${checked}
@@ -756,7 +756,7 @@
       const res = await fetch(`${BACKEND}/admin/documents/${id}?admin_key=${adminKey}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.error) { showModal('Delete failed', esc(data.error), '⚠️'); return; }
-      selectedIds.delete(id);
+      selectedIds.delete(String(id));
       updateBulkBar();
       await loadDocs();
     } catch(e) {
@@ -766,20 +766,21 @@
 
   // ── Batch select ───────────────────────────────────────────────
   function toggleSelect(id, checked) {
-    if (checked) selectedIds.add(id);
-    else selectedIds.delete(id);
+    const sid = String(id);
+    if (checked) selectedIds.add(sid);
+    else selectedIds.delete(sid);
     updateBulkBar();
     // Sync select-all checkbox
     const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.category === currentFilter);
     document.getElementById('selectAllChk').checked =
-      filtered.length > 0 && filtered.every(d => selectedIds.has(d.id));
+      filtered.length > 0 && filtered.every(d => selectedIds.has(String(d.id)));
   }
 
   function toggleSelectAll(checked) {
     const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.category === currentFilter);
     filtered.forEach(d => {
-      if (checked) selectedIds.add(d.id);
-      else selectedIds.delete(d.id);
+      if (checked) selectedIds.add(String(d.id));
+      else selectedIds.delete(String(d.id));
     });
     renderDocs();
     updateBulkBar();
@@ -806,7 +807,7 @@
   async function bulkDelete() {
     const count = selectedIds.size;
     if (!count) return;
-    const names = allDocs.filter(d => selectedIds.has(d.id)).map(d => d.original_name);
+    const names = allDocs.filter(d => selectedIds.has(String(d.id))).map(d => d.original_name);
     const preview = names.slice(0, 5).map(n => `• ${esc(n)}`).join('<br>');
     const more = names.length > 5 ? `<br><em>…and ${names.length - 5} more</em>` : '';
 
