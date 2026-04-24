@@ -1018,7 +1018,7 @@
             // "thinking" indicator — the AI is now analyzing the result and
             // may start streaming text or call another tool next.
             statusEl.style.display = 'flex';
-            statusEl.innerHTML = `<span class="dots-loading"></span>`;
+            statusEl.innerHTML = `thinking<span class="dots-loading"></span>`;
           } else if (evt.type === 'ping') {
             // Server heartbeat: no UI change needed.
           } else if (evt.type === 'error') {
