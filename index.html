@@ -206,20 +206,12 @@
   .send-btn.stop-mode:disabled { background: #e53e3e; opacity: 0.6; }
 
   .stream-status {
-    font-size: 12px; color: #999; margin-bottom: 8px;
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-    padding: 6px 10px; background: #fafafa; border-radius: 8px;
-    border: 1px solid #f0f0f0;
+    font-size: 12px; color: #999; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
   }
-  .stream-status .status-main { display: inline-flex; align-items: baseline; gap: 2px; }
-  .stream-status .status-count {
-    font-size: 11px; color: #888; background: #eee; padding: 1px 7px;
-    border-radius: 10px; margin-left: 4px;
-  }
-  /* Sequential three-dot loader: each dot appears in turn, then all disappear, repeat. */
+  /* Sequential dots: "" → "." → ".." → "..." → loop */
   .stream-status .dots-loading {
-    display: inline-block; letter-spacing: 1px; font-family: inherit;
-    width: 14px; text-align: left; color: inherit;
+    display: inline-block; width: 14px; text-align: left;
   }
   .stream-status .dots-loading::after {
     content: '';
@@ -230,10 +222,6 @@
     25%  { content: '.'; }
     50%  { content: '..'; }
     75%  { content: '...'; }
-    100% { content: ''; }
-  }
-  .stream-status .tool-history {
-    font-size: 11px; color: #aaa; margin-left: 2px;
   }
 
   /* Drag-and-drop overlay */
@@ -944,63 +932,6 @@
     let stopped = false;
     let pendingFrame = null;
 
-    // Status tracking across the whole stream
-    const toolHistory = [];         // list of tool names called, in order
-    let activeToolName = null;      // currently-running tool name (between tool_use and tool_result)
-    let lastEventAt = Date.now();   // timestamp of the last tool/text event
-    let thinkingTimer = null;       // interval id for the "thinking" heartbeat
-
-    function renderStatus(state) {
-      // state: 'calling' | 'result' | 'thinking' | 'hidden'
-      if (state === 'hidden') {
-        statusEl.style.display = 'none';
-        statusEl.classList.remove('thinking');
-        return;
-      }
-      statusEl.style.display = 'flex';
-      statusEl.classList.toggle('thinking', state === 'thinking');
-
-      const countBadge = toolHistory.length > 0
-        ? `<span class="status-count">${toolHistory.length} 次工具调用</span>` : '';
-      const recent = toolHistory.slice(-3).join(' · ');
-      const historyLine = toolHistory.length > 0
-        ? `<span class="tool-history">最近: ${escHtml(recent)}</span>` : '';
-
-      let mainLine;
-      if (state === 'calling') {
-        mainLine = `<span class="status-main">
-          正在调用 <b>${escHtml(activeToolName || '')}</b><span class="dots-loading"></span>
-        </span>`;
-      } else if (state === 'result') {
-        mainLine = `<span class="status-main">
-          <b>${escHtml(activeToolName || '')}</b> 已完成，AI 正在分析结果<span class="dots-loading"></span>
-        </span>`;
-      } else if (state === 'thinking') {
-        mainLine = `<span class="status-main">
-          AI 正在思考中<span class="dots-loading"></span>
-        </span>`;
-      }
-      statusEl.innerHTML = `${mainLine}${countBadge}${historyLine}`;
-    }
-
-    function scheduleThinkingHeartbeat() {
-      if (thinkingTimer) clearInterval(thinkingTimer);
-      thinkingTimer = setInterval(() => {
-        const idleFor = Date.now() - lastEventAt;
-        // After 8s of silence with no active tool running, show thinking
-        if (idleFor > 8000 && activeToolName === null && !stopped) {
-          renderStatus('thinking');
-        }
-      }, 1000);
-    }
-    function clearThinkingHeartbeat() {
-      if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
-    }
-
-    // Show an initial "thinking" state immediately — the first network round-trip
-    // can take a few seconds before any SSE event arrives, and empty status looks stuck.
-    scheduleThinkingHeartbeat();
-
     const payload = {
       message: msg,
       history: history.map(({ role, content, fileId, fileName, fileContent }) => {
@@ -1061,11 +992,9 @@
           try { evt = JSON.parse(dataLine.slice(6)); } catch { continue; }
 
           if (evt.type === 'text') {
-            lastEventAt = Date.now();
             if (!gotFirstText) {
-              // First text chunk — clear the typing placeholder but KEEP status bar visible.
-              // The AI may still call more tools after this; hiding status here would hide
-              // all subsequent tool activity and make the UI look frozen.
+              // First text chunk — clear the typing placeholder.
+              // Keep statusEl visible in case the AI calls more tools after this text.
               contentEl.innerHTML = '';
               gotFirstText = true;
             }
@@ -1079,33 +1008,27 @@
               });
             }
           } else if (evt.type === 'tool_use') {
-            lastEventAt = Date.now();
-            activeToolName = evt.name || '';
-            toolHistory.push(activeToolName);
-            renderStatus('calling');
-            scheduleThinkingHeartbeat();
+            // Minimal UI: just tool name + animated dots. No prefix, no emoji,
+            // no hardcoded language — the tool name is language-neutral.
+            statusEl.style.display = 'flex';
+            statusEl.innerHTML =
+              `${escHtml(evt.name || '')}<span class="dots-loading"></span>`;
           } else if (evt.type === 'tool_result') {
-            lastEventAt = Date.now();
-            // Tool finished; AI will now think about the result and maybe call another tool,
-            // or start/continue streaming text. Keep status visible showing the completed tool.
-            renderStatus('result');
-            activeToolName = null;
-            // Heartbeat may flip this to 'thinking' if we stay silent for >8s
-            scheduleThinkingHeartbeat();
+            // Tool finished. Keep the bar visible but switch to a neutral
+            // "thinking" indicator — the AI is now analyzing the result and
+            // may start streaming text or call another tool next.
+            statusEl.style.display = 'flex';
+            statusEl.innerHTML = `<span class="dots-loading"></span>`;
           } else if (evt.type === 'ping') {
-            // Server heartbeat — don't touch UI, just update lastEventAt to keep
-            // the thinking-heartbeat from tripping if the server is actively streaming.
-            lastEventAt = Date.now();
+            // Server heartbeat: no UI change needed.
           } else if (evt.type === 'error') {
-            clearThinkingHeartbeat();
             if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
+            statusEl.style.display = 'none';
             contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') +
               `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
-            renderStatus('hidden');
           } else if (evt.type === 'done') {
-            clearThinkingHeartbeat();
             if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
-            renderStatus('hidden');
+            statusEl.style.display = 'none';
             // Final render with extras like commission download button
             if (fullText) {
               const extraBtn = buildExtraButton(fullText);
@@ -1115,10 +1038,9 @@
         }
       }
     } catch (err) {
-      clearThinkingHeartbeat();
       if (err.name === 'AbortError') {
         stopped = true;
-        renderStatus('hidden');
+        statusEl.style.display = 'none';
         if (fullText) {
           contentEl.innerHTML = formatText(fullText) +
             `<div style="margin-top:8px;font-size:12px;color:#999">[已停止]</div>`;
@@ -1126,11 +1048,9 @@
           contentEl.innerHTML = `<span style="color:#999;font-size:13px">[已停止]</span>`;
         }
       } else {
-        renderStatus('hidden');
         contentEl.innerHTML = `<span class="error-text">Network error: ${escHtml(err.message || String(err))}</span>`;
       }
     } finally {
-      clearThinkingHeartbeat();
       if (fullText) {
         history.push({
           role: 'user',
