@@ -409,8 +409,11 @@
   }
   .sidebar-backdrop.visible { display: block; opacity: 1; }
 
-  /* ── Mobile breakpoint ── */
-  @media (max-width: 768px) {
+  /* ── Mobile breakpoint ──
+     Trigger on either: narrow viewport (<=768px) OR a coarse-pointer device
+     (phones/tablets in landscape). This is what makes iPhone landscape — which
+     is ~844px wide — still get the hamburger menu and drawer. */
+  @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
     .menu-btn { display: flex; }
 
     /* Sidebar becomes a slide-in drawer (Today/Yesterday groups stay visible inside) */
@@ -458,9 +461,15 @@
     .message-content { max-width: 88%; font-size: 15px; }
     .message-wrapper.user .message-content { padding: 10px 14px; }
 
-    /* Input area: handle bottom safe area */
+    /* Input area: fixed to viewport bottom and offset by --kb-offset
+       (set in JS when iOS keyboard opens) so it sits ABOVE the keyboard
+       instead of getting pushed up by Safari's auto-scroll. */
     .input-area {
+      position: fixed;
+      left: 0; right: 0;
+      bottom: var(--kb-offset, 0px);
       padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+      transition: bottom 0.18s ease;
     }
     .input-box-wrapper { padding: 5px 5px 5px 12px; }
     .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
@@ -479,7 +488,8 @@
     .md-table th, .md-table td { padding: 8px 10px; font-size: 12.5px; }
   }
 
-  @media (min-width: 769px) {
+  /* Desktop only: hide hamburger/backdrop. Non-coarse pointer = mouse, not touch. */
+  @media (min-width: 769px) and (pointer: fine) {
     .menu-btn, .sidebar-backdrop { display: none !important; }
   }
 </style>
@@ -610,12 +620,21 @@
 <script>
   const BACKEND = 'https://chumart-ai.up.railway.app';
 
-  // ── PWA: dynamic viewport height ──────────────────────────────────────────
-  // iOS Safari's 100vh ≠ visible area (URL bar). Also, when keyboard opens
-  // visualViewport shrinks but innerHeight does not. Expose --app-height.
+  // ── PWA: dynamic viewport height + iOS keyboard handling ─────────────────
+  // iOS Safari's 100vh ≠ visible area. When the keyboard opens, visualViewport
+  // height shrinks. We expose:
+  //   --app-height : the visible height (for body)
+  //   --kb-offset  : how high to lift the input area (for .input-area)
   function updateAppHeight() {
-    const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    const vv = window.visualViewport;
+    const h = (vv && vv.height) || window.innerHeight;
+    const winH = window.innerHeight;
+    // Keyboard lifts the input area by however many pixels visualViewport
+    // shrank below the window height. Add visualViewport.offsetTop in case
+    // iOS scrolls the layout viewport up.
+    const kbOffset = Math.max(0, winH - h - (vv ? vv.offsetTop : 0));
     document.documentElement.style.setProperty('--app-height', h + 'px');
+    document.documentElement.style.setProperty('--kb-offset', kbOffset + 'px');
   }
   updateAppHeight();
   window.addEventListener('resize', updateAppHeight);
@@ -624,6 +643,26 @@
     window.visualViewport.addEventListener('resize', updateAppHeight);
     window.visualViewport.addEventListener('scroll', updateAppHeight);
   }
+
+  // When the input gains focus on mobile, iOS will try to scroll it into view
+  // — usually centering it, which leaves a big white gap above. Counter that
+  // by snapping the chat container to its bottom on the next frame.
+  document.addEventListener('focusin', (e) => {
+    if (e.target && e.target.id === 'inputBox') {
+      requestAnimationFrame(() => {
+        const c = document.getElementById('messagesContainer');
+        if (c) c.scrollTop = c.scrollHeight;
+        // Also reset window scroll — iOS sometimes scrolls the body itself
+        window.scrollTo(0, 0);
+      });
+    }
+  });
+  // When the keyboard closes, restore window scroll position
+  document.addEventListener('focusout', (e) => {
+    if (e.target && e.target.id === 'inputBox') {
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+    }
+  });
 
   // ── Mobile sidebar drawer ─────────────────────────────────────────────────
   function openSidebar() {
@@ -639,7 +678,11 @@
     if (sb.classList.contains('open')) closeSidebar(); else openSidebar();
   }
   function maybeCloseSidebarOnMobile() {
-    if (window.matchMedia('(max-width: 768px)').matches) closeSidebar();
+    // Match the CSS: narrow viewport OR coarse-pointer device (phone landscape, tablet)
+    const isMobile = window.matchMedia(
+      '(max-width: 768px), (pointer: coarse) and (max-width: 1024px)'
+    ).matches;
+    if (isMobile) closeSidebar();
   }
 
   window.addEventListener('appinstalled', () => { console.log('[PWA] Installed'); });
