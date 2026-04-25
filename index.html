@@ -1025,6 +1025,10 @@
     text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
     text = text.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
     text = text.replace(/`([^`]+?)`/g, '<code style="background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:monospace">$1</code>');
+    // Fix AI sometimes outputting file:///docs/... instead of /docs/...
+    text = text.replace(/file:\/\/\/docs\//g, '/docs/');
+    text = text.replace(/file:\/\/\//g, '/');
+
     // Document download links — relative path /docs/signed-url/{id}
     text = text.replace(/\[([^\]]+)\]\(\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
       let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
