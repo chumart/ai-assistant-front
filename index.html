@@ -2,9 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Chumart AI</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#111111">
+<meta name="application-name" content="Chumart AI">
+
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chumart AI">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- Favicons -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23111'/><path d='M50 18 L76 33 L76 67 L50 82 L24 67 L24 33 Z' fill='none' stroke='white' stroke-width='6'/></svg>">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -23,13 +39,23 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body {
+    height: 100%;
+  }
+
   body {
     font-family: 'Inter', -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text-primary);
+    /* Use dvh so iOS Safari URL bar collapse doesn't break layout.
+       Fall back to vh + JS --app-height for older browsers. */
     height: 100vh;
+    height: var(--app-height, 100dvh);
     display: flex;
     overflow: hidden;
+    /* Disable iOS rubber-banding on the page itself; chat area still scrolls */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* ── Sidebar ── */
@@ -57,23 +83,15 @@
     padding: 0 8px; margin: 20px 0 8px;
   }
 
-  .history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; padding-bottom: 12px; }
+  .history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
   .history-list::-webkit-scrollbar { width: 3px; }
   .history-list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
 
-  .history-group-label {
-    font-size: 10px; font-weight: 600; color: #aaa;
-    text-transform: uppercase; letter-spacing: 0.05em;
-    padding: 14px 10px 5px; user-select: none;
-  }
-  .history-group-label:first-child { padding-top: 4px; }
-
   .history-item {
-    padding: 8px 10px; font-size: 12.5px; color: var(--text-secondary);
-    border-radius: 7px; cursor: pointer; line-height: 1.4;
+    padding: 9px 10px; font-size: 13px; color: var(--text-secondary);
+    border-radius: 8px; cursor: pointer;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    transition: background 0.12s; display: flex; justify-content: space-between; align-items: center;
-    min-height: 32px;
+    transition: all 0.15s; display: flex; justify-content: space-between; align-items: center;
   }
   .history-item:hover { background: #ebebeb; color: var(--text-primary); }
   .history-item.active { background: #e8e8e8; color: var(--text-primary); font-weight: 500; }
@@ -217,20 +235,6 @@
     font-size: 12px; color: #999; margin-bottom: 4px;
     display: flex; align-items: center; gap: 6px;
   }
-  /* Sequential dots: "" → "." → ".." → "..." → loop */
-  .stream-status .dots-loading {
-    display: inline-block; width: 14px; text-align: left;
-  }
-  .stream-status .dots-loading::after {
-    content: '';
-    animation: dotsStep 1.4s steps(1, end) infinite;
-  }
-  @keyframes dotsStep {
-    0%   { content: ''; }
-    25%  { content: '.'; }
-    50%  { content: '..'; }
-    75%  { content: '...'; }
-  }
 
   /* Drag-and-drop overlay */
   .drop-overlay {
@@ -363,12 +367,112 @@
   }
   .doc-dl-btn:hover { background: #333; }
 
-  @media (max-width: 768px) { .sidebar { display: none; } .greeting-title { font-size: 28px; } }
+  /* ── Mobile menu (hamburger) ── */
+  .menu-btn {
+    display: none;
+    width: 36px; height: 36px; border-radius: 8px;
+    background: transparent; border: none; cursor: pointer;
+    align-items: center; justify-content: center;
+    color: var(--text-primary); flex-shrink: 0;
+    margin-right: 4px; padding: 0;
+  }
+  .menu-btn:active { background: #f0f0f0; }
+
+  /* Backdrop shown when sidebar drawer is open on mobile */
+  .sidebar-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 90;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .sidebar-backdrop.visible { display: block; opacity: 1; }
+
+  /* ── Mobile breakpoint ── */
+  @media (max-width: 768px) {
+    .menu-btn { display: flex; }
+
+    /* Sidebar becomes a slide-in drawer */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 84vw; max-width: 320px;
+      z-index: 100;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 2px 0 16px rgba(0,0,0,0.08);
+      /* Respect notch/home bar */
+      padding-top: calc(16px + env(safe-area-inset-top));
+      padding-left: calc(10px + env(safe-area-inset-left));
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    /* Header: tighten and add safe-area top padding */
+    .header {
+      padding: 0 16px;
+      padding-top: env(safe-area-inset-top);
+      height: calc(56px + env(safe-area-inset-top));
+    }
+    /* Hide the role badge and "Sign out" button on small screens —
+       they're available from the menu / user avatar. Keep avatar + name. */
+    .role-badge { display: none; }
+    .logout-btn {
+      padding: 4px 8px; font-size: 11px;
+    }
+    .user-name {
+      max-width: 90px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* Chat area: less side padding, more bottom space for the floating input */
+    .chat-container {
+      padding: 16px 14px 180px;
+    }
+    .chat-content { max-width: 100%; }
+    #messageList { gap: 22px; }
+
+    /* Empty state: smaller heading */
+    .greeting-title { font-size: 28px; }
+    .greeting-sub { font-size: 14px; margin-bottom: 24px; }
+    .empty-state { padding-top: 6vh; }
+    .suggestions-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .suggestion-card { font-size: 12.5px; padding: 12px 14px; }
+
+    /* Message bubbles can be wider on phones */
+    .message-content { max-width: 88%; font-size: 15px; }
+    .message-wrapper.user .message-content { padding: 10px 14px; }
+
+    /* Input area: handle bottom safe area + dynamic keyboard */
+    .input-area {
+      padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    }
+    .input-box-wrapper { padding: 5px 5px 5px 12px; }
+    .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
+    .disclaimer { font-size: 11px; margin-top: 8px; }
+
+    /* Login card: tighter padding on small screens */
+    .login-card {
+      padding: 36px 26px;
+      margin: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    }
+    .login-title { font-size: 22px; }
+    .login-field input { font-size: 16px; /* prevent iOS auto-zoom */ }
+
+    /* Tables: keep horizontally scrollable but don't waste padding */
+    .md-table th, .md-table td { padding: 8px 10px; font-size: 12.5px; }
+  }
+
+  /* Desktop: hide the hamburger and backdrop */
+  @media (min-width: 769px) {
+    .menu-btn, .sidebar-backdrop { display: none !important; }
+  }
 </style>
 </head>
 <body>
 
-<div class="sidebar">
+<div class="sidebar" id="sidebar">
   <button class="new-chat-btn" onclick="newChat()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
     New Chat
@@ -408,12 +512,20 @@
     </div>
   </div>
 
-  <div id="historyList" class="history-list" style="margin-top:12px"></div>
+  <div class="nav-title" style="margin-top:20px">Recent</div>
+  <div id="historyList" class="history-list"></div>
 </div>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
 <div class="main-content">
   <div class="header">
-    <div class="header-title">Chumart AI</div>
+    <div style="display:flex;align-items:center;gap:4px;min-width:0">
+      <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="header-title">Chumart AI</div>
+    </div>
     <div class="user-badge" id="userBadge">
       <span style="width:7px;height:7px;background:#22c55e;border-radius:50%;display:inline-block;flex-shrink:0"></span>
       <div class="user-avatar" id="userAvatar">?</div>
@@ -485,6 +597,46 @@
 <script>
   const BACKEND = 'https://chumart-ai.up.railway.app';
 
+  // ── PWA: dynamic viewport height ──────────────────────────────────────────
+  // iOS Safari's 100vh ≠ visible area (URL bar). Also, when the keyboard opens,
+  // visualViewport shrinks but window.innerHeight does not. We expose
+  // --app-height on the root and update it on resize / keyboard events.
+  function updateAppHeight() {
+    // Prefer visualViewport (accounts for soft keyboard) when available.
+    const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', h + 'px');
+  }
+  updateAppHeight();
+  window.addEventListener('resize', updateAppHeight);
+  window.addEventListener('orientationchange', updateAppHeight);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateAppHeight);
+    window.visualViewport.addEventListener('scroll', updateAppHeight);
+  }
+
+  // ── Mobile sidebar drawer ─────────────────────────────────────────────────
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarBackdrop').classList.add('visible');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarBackdrop').classList.remove('visible');
+  }
+  function toggleSidebar() {
+    const sb = document.getElementById('sidebar');
+    if (sb.classList.contains('open')) closeSidebar(); else openSidebar();
+  }
+  // Close drawer when a history item or "New Chat" is tapped on mobile
+  function maybeCloseSidebarOnMobile() {
+    if (window.matchMedia('(max-width: 768px)').matches) closeSidebar();
+  }
+
+  // ── PWA: log install state (helpful for debugging "Add to Home Screen") ──
+  window.addEventListener('appinstalled', () => {
+    console.log('[PWA] Installed');
+  });
+
   let allSessions = [], currentSessionId = null, history = [], busy = false;
   let attachedFile = null, isUploading = false;
   let currentUser = null;
@@ -531,6 +683,7 @@
     emptyEl.style.display = 'flex';
     clearAttachment();
     renderSidebar();
+    maybeCloseSidebarOnMobile();
   }
 
   function loadSession(id) {
@@ -546,6 +699,7 @@
     clearAttachment();
     renderSidebar();
     scrollBottom();
+    maybeCloseSidebarOnMobile();
   }
 
   function saveSession(firstMsg = '') {
@@ -580,53 +734,23 @@
 
   function renderSidebar() {
     histEl.innerHTML = '';
-    if (!allSessions.length) return;
-
-    // Group sessions by date
-    const now = new Date();
-    const todayStr = now.toDateString();
-    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-    const yesterdayStr = yesterday.toDateString();
-    const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
-
-    const groups = { 'Today': [], 'Yesterday': [], 'This Week': [], 'Earlier': [] };
-
     allSessions.forEach(s => {
-      // Parse session date from ID (timestamp) or updated_at
-      let d;
-      if (s.updated_at) d = new Date(s.updated_at);
-      else if (typeof s.id === 'string' && /^\d{13}$/.test(s.id)) d = new Date(parseInt(s.id));
-      else d = new Date(0);
-
-      if (d.toDateString() === todayStr) groups['Today'].push(s);
-      else if (d.toDateString() === yesterdayStr) groups['Yesterday'].push(s);
-      else if (d > weekAgo) groups['This Week'].push(s);
-      else groups['Earlier'].push(s);
+      const d = document.createElement('div');
+      d.className = 'history-item' + (s.id === currentSessionId ? ' active' : '');
+      const span = document.createElement('span');
+      span.textContent = s.title;
+      span.style.overflow = 'hidden';
+      span.style.textOverflow = 'ellipsis';
+      span.style.whiteSpace = 'nowrap';
+      const del = document.createElement('button');
+      del.className = 'trash-btn';
+      del.textContent = '✕';
+      del.onclick = e => { e.stopPropagation(); deleteSession(s.id); };
+      d.appendChild(span);
+      d.appendChild(del);
+      d.onclick = () => loadSession(s.id);
+      histEl.appendChild(d);
     });
-
-    for (const [label, sessions] of Object.entries(groups)) {
-      if (!sessions.length) continue;
-      const groupLabel = document.createElement('div');
-      groupLabel.className = 'history-group-label';
-      groupLabel.textContent = label;
-      histEl.appendChild(groupLabel);
-
-      sessions.forEach(s => {
-        const d = document.createElement('div');
-        d.className = 'history-item' + (s.id === currentSessionId ? ' active' : '');
-        const span = document.createElement('span');
-        span.textContent = s.title;
-        span.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0';
-        const del = document.createElement('button');
-        del.className = 'trash-btn';
-        del.textContent = '✕';
-        del.onclick = e => { e.stopPropagation(); deleteSession(s.id); };
-        d.appendChild(span);
-        d.appendChild(del);
-        d.onclick = () => loadSession(s.id);
-        histEl.appendChild(d);
-      });
-    }
   }
 
   // ── Input helpers ─────────────────────────────────────────────────────────
@@ -969,161 +1093,6 @@
     let stopped = false;
     let pendingFrame = null;
 
-    // ─── Progress narration: evolves the status message as a tool call takes longer ───
-    // Stages: [ [minSec, suffix], ... ]  — suffix is appended after "{toolName}".
-    // Empty suffix = just "{toolName}...".
-    const TOOL_STAGES = {
-      'odoo_search': [
-        [0,  ''],
-        [3,  ' — querying Odoo'],
-        [10, ' — scanning records'],
-        [20, ' — filtering large dataset'],
-        [40, ' — still working, complex query'],
-        [80, ' — hang tight, almost there']
-      ],
-      'odoo_search_products_by_sku': [
-        [0,  ''],
-        [3,  ' — looking up SKUs in Odoo'],
-        [10, ' — matching many products'],
-        [25, ' — large SKU batch, still searching'],
-        [60, ' — hang tight']
-      ],
-      'odoo_get_product_vendors': [
-        [0,  ''],
-        [5,  ' — pulling vendor data'],
-        [15, ' — this is a lot of vendors'],
-        [40, ' — still at it']
-      ],
-      'odoo_update_vendor_price': [
-        [0,  ''],
-        [3,  ' — resolving products'],
-        [8,  ' — looking up supplier records'],
-        [15, ' — writing prices to Odoo'],
-        [30, ' — large update, still writing']
-      ],
-      'odoo_create_bulk_po': [
-        [0,  ''],
-        [3,  ' — building purchase orders'],
-        [10, ' — creating order lines'],
-        [25, ' — validating vendors and products'],
-        [50, ' — nearly done']
-      ],
-      'odoo_write_record': [
-        [0,  ''],
-        [5,  ' — saving to Odoo'],
-        [15, ' — Odoo is slow today']
-      ],
-      'odoo_create_record': [
-        [0,  ''],
-        [5,  ' — creating record in Odoo'],
-        [15, ' — Odoo is slow today']
-      ],
-      'get_monthly_tax': [
-        [0,  ''],
-        [3,  ' — aggregating invoices'],
-        [10, ' — computing tax breakdown'],
-        [25, ' — large month, still crunching']
-      ],
-      'get_quarterly_tax': [
-        [0,  ''],
-        [3,  ' — aggregating quarterly invoices'],
-        [12, ' — computing tax breakdown'],
-        [30, ' — big quarter, still crunching']
-      ],
-      'get_monthly_sales': [
-        [0,  ''],
-        [3,  ' — pulling sales records'],
-        [10, ' — computing commissions'],
-        [25, ' — lots of salespeople, still working']
-      ],
-      'get_missing_tax': [
-        [0,  ''],
-        [3,  ' — scanning CA invoices for missing tax'],
-        [12, ' — deep scan in progress']
-      ],
-      'search_knowledge': [
-        [0,  ''],
-        [3,  ' — searching document library'],
-        [10, ' — ranking passages']
-      ],
-      'web_fetch': [
-        [0,  ''],
-        [3,  ' — fetching page'],
-        [10, ' — parsing content'],
-        [25, ' — slow site, still waiting']
-      ],
-      'web_search': [
-        [0,  ''],
-        [3,  ' — searching the web'],
-        [10, ' — ranking results']
-      ],
-      // Fallback for any tool not listed above
-      '_default': [
-        [0,  ''],
-        [5,  ' — working'],
-        [15, ' — still working'],
-        [30, ' — this is taking a while'],
-        [60, ' — hang tight']
-      ]
-    };
-
-    // Stages for the "thinking" phase (between tool_result and next tool_use or text).
-    const THINKING_STAGES = [
-      [0,  'thinking'],
-      [5,  'thinking — analyzing results'],
-      [15, 'thinking — large result set, organizing'],
-      [30, 'thinking — this is a complex one'],
-      [60, 'thinking — hang tight']
-    ];
-
-    function pickStage(stages, elapsedSec) {
-      let pick = stages[0];
-      for (const s of stages) {
-        if (elapsedSec >= s[0]) pick = s;
-        else break;
-      }
-      return pick;
-    }
-
-    let statusPhase = null;     // 'tool' | 'thinking' | null
-    let statusTool = '';         // tool name during 'tool' phase
-    let statusStartedAt = 0;     // timestamp when current phase started
-    let statusTimer = null;
-
-    function renderStatus() {
-      if (statusPhase === null) {
-        statusEl.style.display = 'none';
-        return;
-      }
-      statusEl.style.display = 'flex';
-      const elapsed = (Date.now() - statusStartedAt) / 1000;
-      if (statusPhase === 'tool') {
-        const stages = TOOL_STAGES[statusTool] || TOOL_STAGES._default;
-        const [, suffix] = pickStage(stages, elapsed);
-        statusEl.innerHTML =
-          `${escHtml(statusTool)}${escHtml(suffix)}<span class="dots-loading"></span>`;
-      } else if (statusPhase === 'thinking') {
-        const [, label] = pickStage(THINKING_STAGES, elapsed);
-        statusEl.innerHTML = `${escHtml(label)}<span class="dots-loading"></span>`;
-      }
-    }
-
-    function startStatus(phase, toolName) {
-      statusPhase = phase;
-      statusTool = toolName || '';
-      statusStartedAt = Date.now();
-      renderStatus();
-      if (statusTimer) clearInterval(statusTimer);
-      // Re-render every second so stage messages advance even when no new SSE event arrives
-      statusTimer = setInterval(renderStatus, 1000);
-    }
-
-    function stopStatus() {
-      statusPhase = null;
-      if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
-      statusEl.style.display = 'none';
-    }
-
     const payload = {
       message: msg,
       history: history.map(({ role, content, fileId, fileName, fileContent }) => {
@@ -1185,9 +1154,8 @@
 
           if (evt.type === 'text') {
             if (!gotFirstText) {
-              // First text chunk — clear the typing placeholder.
-              // Keep statusEl visible in case the AI calls more tools after this text.
               contentEl.innerHTML = '';
+              statusEl.style.display = 'none';
               gotFirstText = true;
             }
             fullText += evt.delta || '';
@@ -1200,24 +1168,17 @@
               });
             }
           } else if (evt.type === 'tool_use') {
-            // Start the "tool" status phase — renderStatus will keep advancing
-            // the stage message each second based on elapsed time.
-            startStatus('tool', evt.name || '');
+            statusEl.style.display = 'block';
+            statusEl.textContent = `🔧 调用工具: ${evt.name}...`;
           } else if (evt.type === 'tool_result') {
-            // Tool finished. Switch to the "thinking" phase and restart the clock.
-            // The AI is now analyzing the result and may start streaming text
-            // or call another tool next.
-            startStatus('thinking');
-          } else if (evt.type === 'ping') {
-            // Server heartbeat: no UI change needed.
+            statusEl.textContent = `✓ ${evt.name} 完成`;
           } else if (evt.type === 'error') {
             if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
-            stopStatus();
             contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') +
               `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
           } else if (evt.type === 'done') {
             if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
-            stopStatus();
+            statusEl.style.display = 'none';
             // Final render with extras like commission download button
             if (fullText) {
               const extraBtn = buildExtraButton(fullText);
@@ -1229,7 +1190,7 @@
     } catch (err) {
       if (err.name === 'AbortError') {
         stopped = true;
-        stopStatus();
+        statusEl.style.display = 'none';
         if (fullText) {
           contentEl.innerHTML = formatText(fullText) +
             `<div style="margin-top:8px;font-size:12px;color:#999">[已停止]</div>`;
@@ -1237,11 +1198,9 @@
           contentEl.innerHTML = `<span style="color:#999;font-size:13px">[已停止]</span>`;
         }
       } else {
-        stopStatus();
         contentEl.innerHTML = `<span class="error-text">Network error: ${escHtml(err.message || String(err))}</span>`;
       }
     } finally {
-      stopStatus();
       if (fullText) {
         history.push({
           role: 'user',
@@ -1374,7 +1333,7 @@
       const res = await fetch(`${BACKEND}/sessions/${currentUser.uid}`);
       const data = await res.json();
       if (data.sessions && data.sessions.length > 0) {
-        allSessions = data.sessions.map(s => ({ id: s.id, title: s.title, history: s.history, updated_at: s.updated_at }));
+        allSessions = data.sessions.map(s => ({ id: s.id, title: s.title, history: s.history }));
         renderSidebar();
       }
       newChat(); // Always start with a fresh chat
