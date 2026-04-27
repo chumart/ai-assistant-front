@@ -627,14 +627,16 @@
   // height shrinks. We expose:
   //   --app-height : the visible height (for body)
   //   --kb-offset  : how high to lift the input area (for .input-area)
+  // 注意: iOS 地址栏会让 visualViewport 比 innerHeight 小一点(几十像素),
+  // 这不算键盘打开。只有差值 > 150px 时才视为键盘打开,这样输入框不会
+  // 因为地址栏显隐而"飘"动。
   function updateAppHeight() {
     const vv = window.visualViewport;
     const h = (vv && vv.height) || window.innerHeight;
     const winH = window.innerHeight;
-    // Keyboard lifts the input area by however many pixels visualViewport
-    // shrank below the window height. Add visualViewport.offsetTop in case
-    // iOS scrolls the layout viewport up.
-    const kbOffset = Math.max(0, winH - h - (vv ? vv.offsetTop : 0));
+    const rawDiff = Math.max(0, winH - h - (vv ? vv.offsetTop : 0));
+    // 只有键盘真正打开(差值 > 150px)时才抬升输入框
+    const kbOffset = rawDiff > 150 ? rawDiff : 0;
     document.documentElement.style.setProperty('--app-height', h + 'px');
     document.documentElement.style.setProperty('--kb-offset', kbOffset + 'px');
   }
