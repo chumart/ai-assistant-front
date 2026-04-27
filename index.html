@@ -468,7 +468,8 @@
       position: fixed;
       left: 0; right: 0;
       bottom: var(--kb-offset, 0px);
-      padding: 10px 12px calc(8px + env(safe-area-inset-bottom));
+      /* 紧贴底部: 只保留 safe-area (iOS home indicator),不再加额外 padding */
+      padding: 8px 12px env(safe-area-inset-bottom);
       transition: bottom 0.18s ease;
     }
     .input-box-wrapper { padding: 5px 5px 5px 12px; }
