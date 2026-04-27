@@ -446,7 +446,8 @@
     }
 
     /* Chat area */
-    .chat-container { padding: 16px 14px 180px; }
+    /* 1. 缩小过大的底部留白,避免滚动计算偏移太大 */
+    .chat-container { padding: 16px 14px calc(70px + env(safe-area-inset-bottom)); }
     .chat-content { max-width: 100%; }
     #messageList { gap: 22px; }
 
@@ -461,16 +462,15 @@
     .message-content { max-width: 88%; font-size: 15px; }
     .message-wrapper.user .message-content { padding: 10px 14px; }
 
-    /* Input area: fixed to viewport bottom and offset by --kb-offset
-       (set in JS when iOS keyboard opens) so it sits ABOVE the keyboard
-       instead of getting pushed up by Safari's auto-scroll. */
+    /* 2. 输入区域: absolute 定位贴底 + 安全区适配 */
     .input-area {
-      position: fixed;
+      position: absolute;       /* 改回 absolute,配合 visualViewport 的高度自动贴底,比 fixed 更稳定 */
       left: 0; right: 0;
-      bottom: var(--kb-offset, 0px);
-      /* 完全紧贴底部: 不留 safe-area 空间(注意 home indicator 横线会盖在输入框上) */
-      padding: 8px 12px 8px;
-      transition: bottom 0.18s ease;
+      bottom: 0;                /* 直接贴底,不再需要 var(--kb-offset) */
+      background: var(--bg);    /* 纯色背景,去除透明渐变 */
+      border-top: 1px solid var(--border);
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+      transition: none;         /* 移除过渡动画,让输入框紧跟键盘原生弹出速度 */
     }
     .input-box-wrapper { padding: 5px 5px 5px 12px; }
     .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
@@ -650,15 +650,15 @@
 
   // When the input gains focus on mobile, iOS will try to scroll it into view
   // — usually centering it, which leaves a big white gap above. Counter that
-  // by snapping the chat container to its bottom on the next frame.
+  // by snapping the chat container to its bottom AFTER the keyboard animation
+  // completes (~300ms) so the visualViewport is fully updated.
   document.addEventListener('focusin', (e) => {
     if (e.target && e.target.id === 'inputBox') {
-      requestAnimationFrame(() => {
+      setTimeout(() => {
         const c = document.getElementById('messagesContainer');
         if (c) c.scrollTop = c.scrollHeight;
-        // Also reset window scroll — iOS sometimes scrolls the body itself
         window.scrollTo(0, 0);
-      });
+      }, 300);
     }
   });
   // When the keyboard closes, restore window scroll position
