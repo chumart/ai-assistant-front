@@ -39,12 +39,11 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* 1. 锁死根元素: 防止 iOS 弹键盘时把整个页面顶出屏幕外 */
+  /* 1. 全局布局: 使用 dvh (动态视口),弹键盘时自动缩小高度 */
   html, body {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: var(--app-height, 100%);
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
     overscroll-behavior: none;
   }
@@ -53,7 +52,7 @@
     font-family: 'Inter', -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text-primary);
-    display: flex;
+    display: flex;                      /* 横向: sidebar + main-content */
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -107,7 +106,7 @@
   .trash-btn:hover { color: #e53e3e; }
 
   /* ── Main ── */
-  .main-content { flex: 1; display: flex; flex-direction: column; position: relative; height: 100%; min-width: 0; }
+  .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; min-width: 0; }
 
   .header {
     height: 60px; display: flex; align-items: center; padding: 0 24px;
@@ -448,8 +447,7 @@
     }
 
     /* Chat area */
-    /* 缩小过大的底部留白,避免滚动计算偏移太大 */
-    .chat-container { padding: 16px 14px 20px; }
+    .chat-container { padding: 16px 14px 16px; }
     .chat-content { max-width: 100%; }
     #messageList { gap: 22px; }
 
@@ -464,19 +462,15 @@
     .message-content { max-width: 88%; font-size: 15px; }
     .message-wrapper.user .message-content { padding: 10px 14px; }
 
-    /* 输入区域: 回归普通 Flex 布局,不要用 fixed/absolute */
+    /* 输入区域: 普通 Flex 子元素,自然贴底 */
     .input-area {
-      position: relative;        /* 取消 fixed/absolute */
-      bottom: 0;
-      flex-shrink: 0;            /* 防止被压缩 */
+      position: relative;        /* 不用 fixed/absolute */
+      flex-shrink: 0;            /* 不被聊天记录挤压 */
       background: var(--bg);
       border-top: 1px solid var(--border);
       padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-      transition: none;          /* 去除动画,防止拖泥带水 */
-    }
-    /* 当 JS 探测到键盘打开时,取消小白条的安全区 padding */
-    body.keyboard-open .input-area {
-      padding-bottom: 8px;
+      bottom: auto;              /* 清除可能遗留的 bottom 属性 */
+      transition: none;
     }
     .input-box-wrapper { padding: 5px 5px 5px 12px; }
     .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
@@ -628,43 +622,14 @@
 <script>
   const BACKEND = 'https://chumart-ai.up.railway.app';
 
-  // ── PWA: 彻底解决 iOS 键盘与视口问题 ──
-  function updateAppHeight() {
-    const vv = window.visualViewport;
-    const h = (vv && vv.height) ? vv.height : window.innerHeight;
-
-    // 1. 实时把可视高度赋给根元素 (body 用 var(--app-height))
-    document.documentElement.style.setProperty('--app-height', h + 'px');
-
-    // 2. 核心修正: 如果系统悄悄把页面往上推了, 我们要强行拉回来
-    if (vv && vv.offsetTop > 0) {
-      window.scrollTo(0, 0);
-    }
-
-    // 3. 判断键盘是否弹起 (当前高度明显小于屏幕高度)
-    if (vv && vv.height < window.screen.height - 150) {
-      document.body.classList.add('keyboard-open');
-    } else {
-      document.body.classList.remove('keyboard-open');
-    }
-  }
-
-  updateAppHeight();
-  window.addEventListener('resize', updateAppHeight);
-  window.addEventListener('orientationchange', updateAppHeight);
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', updateAppHeight);
-    window.visualViewport.addEventListener('scroll', updateAppHeight); // 监听系统强制滚动
-  }
-
-  // 处理输入框获取焦点时的滚动 (等键盘动画 ~300ms 完成后再滚)
+  // ── iOS 焦点处理: 等键盘动画完成后再滚动到底部 ──
   document.addEventListener('focusin', (e) => {
     if (e.target && e.target.id === 'inputBox') {
       setTimeout(() => {
-        window.scrollTo(0, 0); // 再次确认页面没有被顶飞
+        window.scrollTo(0, 0);
         const c = document.getElementById('messagesContainer');
         if (c) c.scrollTop = c.scrollHeight;
-      }, 300);
+      }, 300); // 等待 iOS 键盘动画完毕
     }
   });
 
