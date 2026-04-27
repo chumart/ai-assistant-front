@@ -35,24 +35,29 @@
     --border: #e8e8e8;
     --radius-full: 9999px;
     --radius-lg: 16px;
+    /* 动态控制变量(JS 接管) */
+    --app-height: 100vh;
+    --safe-bottom: env(safe-area-inset-bottom);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* 1. 全局布局: 使用 dvh (动态视口),弹键盘时自动缩小高度 */
+  /* 1. 全局: 锁死页面,高度完全由 JS 的 --app-height 控制 */
   html, body {
-    height: 100dvh;
-    margin: 0;
-    padding: 0;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: var(--app-height);
     overflow: hidden;
     overscroll-behavior: none;
+    touch-action: none;          /* 防 Safari 橡皮筋下拉 */
   }
 
   body {
     font-family: 'Inter', -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text-primary);
-    display: flex;                      /* 横向: sidebar + main-content */
+    display: flex;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -468,8 +473,9 @@
       flex-shrink: 0;            /* 不被聊天记录挤压 */
       background: var(--bg);
       border-top: 1px solid var(--border);
-      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-      bottom: auto;              /* 清除可能遗留的 bottom 属性 */
+      /* 底部 padding = 8px + JS 动态计算的安全区(键盘弹出时变 0) */
+      padding: 8px 12px calc(8px + var(--safe-bottom));
+      bottom: auto;
       transition: none;
     }
     .input-box-wrapper { padding: 5px 5px 5px 12px; }
@@ -622,20 +628,51 @@
 <script>
   const BACKEND = 'https://chumart-ai.up.railway.app';
 
-  // ── iOS 焦点处理: 等键盘动画完成后再滚动到底部 ──
+  // ── 终极修复: iOS PWA 视口与键盘高度接管 ──
+  function updateAppHeight() {
+    const vv = window.visualViewport;
+    const h = vv ? vv.height : window.innerHeight;
+
+    // 1. 强制页面高度等于真实的肉眼可见高度
+    document.documentElement.style.setProperty('--app-height', `${h}px`);
+
+    // 2. 动态调整小白条安全区:
+    //    键盘弹起时(高度大幅缩小) → 不需要 home indicator 安全区
+    //    键盘收起时 → 恢复底部 home indicator 避让空间
+    if (vv && vv.height < window.screen.height - 150) {
+      document.documentElement.style.setProperty('--safe-bottom', '0px');
+    } else {
+      document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom)');
+    }
+
+    // 3. 强行拉回可能被 Safari 顶上去的页面
+    if (vv && vv.offsetTop > 0) {
+      window.scrollTo(0, 0);
+    }
+  }
+
+  updateAppHeight();
+  window.addEventListener('resize', updateAppHeight);
+  window.addEventListener('orientationchange', updateAppHeight);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateAppHeight);
+    window.visualViewport.addEventListener('scroll', updateAppHeight);
+  }
+
+  // 焦点处理: 等键盘动画完成后滚动到底部
   document.addEventListener('focusin', (e) => {
     if (e.target && e.target.id === 'inputBox') {
       setTimeout(() => {
         window.scrollTo(0, 0);
         const c = document.getElementById('messagesContainer');
         if (c) c.scrollTop = c.scrollHeight;
-      }, 300); // 等待 iOS 键盘动画完毕
+      }, 300);
     }
   });
 
   document.addEventListener('focusout', (e) => {
     if (e.target && e.target.id === 'inputBox') {
-      window.scrollTo(0, 0);
+      setTimeout(() => window.scrollTo(0, 0), 50);
     }
   });
 
