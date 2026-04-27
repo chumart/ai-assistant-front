@@ -715,8 +715,24 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
+  // 检测是否手机端: 屏幕宽度 < 768px 或 userAgent 含手机标识
+  const IS_MOBILE = (window.innerWidth < 768) ||
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  // 手机端用 localStorage (持久化, 30天免登录), 电脑端用 sessionStorage (关闭浏览器即清空)
+  const userStore = IS_MOBILE ? localStorage : sessionStorage;
+
   window.addEventListener('load', () => {
-    const user = sessionStorage.getItem('chumart_user');
+    // 迁移: 旧版本可能存在 sessionStorage 里, 手机端需要兼容一下
+    let user = userStore.getItem('chumart_user');
+    if (!user && IS_MOBILE) {
+      // 手机端尝试从 sessionStorage 找(老版本数据)
+      user = sessionStorage.getItem('chumart_user');
+      if (user) {
+        localStorage.setItem('chumart_user', user);
+        sessionStorage.removeItem('chumart_user');
+      }
+    }
     if (user) {
       currentUser = JSON.parse(user);
       showApp(); // async — loads sessions from DB
@@ -1526,14 +1542,17 @@
     try {
       const res = await fetch(BACKEND + '/auth/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({
+          username, password,
+          client_type: IS_MOBILE ? 'mobile' : 'web'
+        })
       });
       const data = await res.json();
       if (data.success) {
         currentUser = { uid: data.uid, name: data.name, username: data.username,
           role: data.role || 'guest', role_label: data.role_label || '', permissions: data.permissions || {},
           session_token: data.session_token || '' };
-        sessionStorage.setItem('chumart_user', JSON.stringify(currentUser));
+        userStore.setItem('chumart_user', JSON.stringify(currentUser));
         showApp();
       } else {
         showLoginError(data.error || 'Invalid username or password.');
@@ -1594,7 +1613,9 @@
   }
 
   function doLogout() {
+    // 清两个存储位置都清掉(防止迁移残留)
     sessionStorage.removeItem('chumart_user');
+    localStorage.removeItem('chumart_user');
     currentUser = null;
     selectedModel = 'claude-haiku-4-5-20251001';
     document.getElementById('modelSelectorWrap').style.display = 'none';
