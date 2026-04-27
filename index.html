@@ -468,12 +468,13 @@
       position: fixed;
       left: 0; right: 0;
       bottom: var(--kb-offset, 0px);
-      padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+      padding: 10px 12px calc(8px + env(safe-area-inset-bottom));
       transition: bottom 0.18s ease;
     }
     .input-box-wrapper { padding: 5px 5px 5px 12px; }
     .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
-    .disclaimer { font-size: 11px; margin-top: 8px; }
+    /* 手机端隐藏底部 disclaimer 那行 */
+    .disclaimer { display: none; }
 
     /* Login card */
     .login-card {
