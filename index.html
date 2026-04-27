@@ -39,21 +39,21 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* 1. 锁死根元素: 防止 iOS 弹键盘时把整个页面顶出屏幕外 */
   html, body {
-    height: 100%;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: var(--app-height, 100%);
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   body {
     font-family: 'Inter', -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text-primary);
-    /* Use dvh so iOS Safari URL bar collapse doesn't break layout.
-       Fall back to vh + JS --app-height for older browsers. */
-    height: 100vh;
-    height: var(--app-height, 100dvh);
     display: flex;
-    overflow: hidden;
-    overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -138,6 +138,8 @@
   .chat-container {
     flex: 1; overflow-y: auto; padding: 24px 24px 160px;
     scroll-behavior: smooth; display: flex; flex-direction: column; align-items: center;
+    -webkit-overflow-scrolling: touch;  /* iOS 原生顺滑滚动 */
+    touch-action: pan-y;                /* 允许内部上下滑动 */
   }
   .chat-container::-webkit-scrollbar { width: 5px; }
   .chat-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 5px; }
@@ -446,8 +448,8 @@
     }
 
     /* Chat area */
-    /* 1. 缩小过大的底部留白,避免滚动计算偏移太大 */
-    .chat-container { padding: 16px 14px calc(70px + env(safe-area-inset-bottom)); }
+    /* 缩小过大的底部留白,避免滚动计算偏移太大 */
+    .chat-container { padding: 16px 14px 20px; }
     .chat-content { max-width: 100%; }
     #messageList { gap: 22px; }
 
@@ -462,15 +464,19 @@
     .message-content { max-width: 88%; font-size: 15px; }
     .message-wrapper.user .message-content { padding: 10px 14px; }
 
-    /* 2. 输入区域: absolute 定位贴底 + 安全区适配 */
+    /* 输入区域: 回归普通 Flex 布局,不要用 fixed/absolute */
     .input-area {
-      position: absolute;       /* 改回 absolute,配合 visualViewport 的高度自动贴底,比 fixed 更稳定 */
-      left: 0; right: 0;
-      bottom: 0;                /* 直接贴底,不再需要 var(--kb-offset) */
-      background: var(--bg);    /* 纯色背景,去除透明渐变 */
+      position: relative;        /* 取消 fixed/absolute */
+      bottom: 0;
+      flex-shrink: 0;            /* 防止被压缩 */
+      background: var(--bg);
       border-top: 1px solid var(--border);
       padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-      transition: none;         /* 移除过渡动画,让输入框紧跟键盘原生弹出速度 */
+      transition: none;          /* 去除动画,防止拖泥带水 */
+    }
+    /* 当 JS 探测到键盘打开时,取消小白条的安全区 padding */
+    body.keyboard-open .input-area {
+      padding-bottom: 8px;
     }
     .input-box-wrapper { padding: 5px 5px 5px 12px; }
     .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
@@ -622,49 +628,49 @@
 <script>
   const BACKEND = 'https://chumart-ai.up.railway.app';
 
-  // ── PWA: dynamic viewport height + iOS keyboard handling ─────────────────
-  // iOS Safari's 100vh ≠ visible area. When the keyboard opens, visualViewport
-  // height shrinks. We expose:
-  //   --app-height : the visible height (for body)
-  //   --kb-offset  : how high to lift the input area (for .input-area)
-  // 注意: iOS 地址栏会让 visualViewport 比 innerHeight 小一点(几十像素),
-  // 这不算键盘打开。只有差值 > 150px 时才视为键盘打开,这样输入框不会
-  // 因为地址栏显隐而"飘"动。
+  // ── PWA: 彻底解决 iOS 键盘与视口问题 ──
   function updateAppHeight() {
     const vv = window.visualViewport;
-    const h = (vv && vv.height) || window.innerHeight;
-    const winH = window.innerHeight;
-    const rawDiff = Math.max(0, winH - h - (vv ? vv.offsetTop : 0));
-    // 只有键盘真正打开(差值 > 150px)时才抬升输入框
-    const kbOffset = rawDiff > 150 ? rawDiff : 0;
+    const h = (vv && vv.height) ? vv.height : window.innerHeight;
+
+    // 1. 实时把可视高度赋给根元素 (body 用 var(--app-height))
     document.documentElement.style.setProperty('--app-height', h + 'px');
-    document.documentElement.style.setProperty('--kb-offset', kbOffset + 'px');
+
+    // 2. 核心修正: 如果系统悄悄把页面往上推了, 我们要强行拉回来
+    if (vv && vv.offsetTop > 0) {
+      window.scrollTo(0, 0);
+    }
+
+    // 3. 判断键盘是否弹起 (当前高度明显小于屏幕高度)
+    if (vv && vv.height < window.screen.height - 150) {
+      document.body.classList.add('keyboard-open');
+    } else {
+      document.body.classList.remove('keyboard-open');
+    }
   }
+
   updateAppHeight();
   window.addEventListener('resize', updateAppHeight);
   window.addEventListener('orientationchange', updateAppHeight);
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', updateAppHeight);
-    window.visualViewport.addEventListener('scroll', updateAppHeight);
+    window.visualViewport.addEventListener('scroll', updateAppHeight); // 监听系统强制滚动
   }
 
-  // When the input gains focus on mobile, iOS will try to scroll it into view
-  // — usually centering it, which leaves a big white gap above. Counter that
-  // by snapping the chat container to its bottom AFTER the keyboard animation
-  // completes (~300ms) so the visualViewport is fully updated.
+  // 处理输入框获取焦点时的滚动 (等键盘动画 ~300ms 完成后再滚)
   document.addEventListener('focusin', (e) => {
     if (e.target && e.target.id === 'inputBox') {
       setTimeout(() => {
+        window.scrollTo(0, 0); // 再次确认页面没有被顶飞
         const c = document.getElementById('messagesContainer');
         if (c) c.scrollTop = c.scrollHeight;
-        window.scrollTo(0, 0);
       }, 300);
     }
   });
-  // When the keyboard closes, restore window scroll position
+
   document.addEventListener('focusout', (e) => {
     if (e.target && e.target.id === 'inputBox') {
-      requestAnimationFrame(() => window.scrollTo(0, 0));
+      window.scrollTo(0, 0);
     }
   });
 
