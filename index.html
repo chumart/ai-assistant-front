@@ -5,19 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Chumart AI</title>
 
-<!-- PWA -->
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#111111">
+<meta name="theme-color" content="#ffffff">
 <meta name="application-name" content="Chumart AI">
 
-<!-- iOS PWA -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Chumart AI">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-<!-- Favicons -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23111'/><path d='M50 18 L76 33 L76 67 L50 82 L24 67 L24 33 Z' fill='none' stroke='white' stroke-width='6'/></svg>">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 
@@ -26,7 +23,7 @@
 <style>
   :root {
     --bg: #ffffff;
-    --sidebar-bg: #f7f7f7;
+    --sidebar-bg: #f9f9f9;
     --surface: #f4f4f4;
     --text-primary: #111111;
     --text-secondary: #555555;
@@ -35,30 +32,29 @@
     --border: #e8e8e8;
     --radius-full: 9999px;
     --radius-lg: 16px;
-    /* iOS PWA 动态变量（仅 mobile JS 会更新） */
+    
+    /* iOS 键盘动态接管变量 */
     --app-height: 100dvh;
     --safe-bottom: env(safe-area-inset-bottom);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* 全局: --app-height 默认 100dvh，桌面端不变；iOS PWA 键盘弹起时 JS 动态更新 */
+  /* ── 1. 全局布局 ── */
   html, body {
-    height: var(--app-height);
-    position: fixed;
+    height: var(--app-height); 
+    position: fixed; 
     inset: 0;
     width: 100%;
     margin: 0;
     padding: 0;
     overflow: hidden;
     overscroll-behavior: none;
-  }
-
-  body {
-    font-family: 'Inter', -apple-system, sans-serif;
+    touch-action: none;
     background: var(--bg);
+    font-family: 'Inter', -apple-system, sans-serif;
     color: var(--text-primary);
-    display: flex;                      /* 横向: sidebar + main-content */
+    display: flex;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -111,16 +107,36 @@
   .history-item:hover .trash-btn { display: block; }
   .trash-btn:hover { color: #e53e3e; }
 
+  /* Sidebar 底部登出按钮 */
+  .sidebar-footer {
+    margin-top: auto; 
+    padding-top: 12px; 
+    border-top: 1px solid var(--border);
+  }
+  .logout-btn-sidebar {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: none; border: none; padding: 12px 10px; 
+    font-size: 13.5px; font-weight: 500; color: #e53e3e; 
+    cursor: pointer; font-family: inherit; border-radius: 8px; 
+    transition: background 0.15s;
+  }
+  .logout-btn-sidebar:hover { background: #fef2f2; }
+
   /* ── Main ── */
   .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; min-width: 0; }
 
+  /* ── 2. Gemini 风格 Header ── */
   .header {
-    height: 60px; display: flex; align-items: center; padding: 0 24px;
+    height: 60px; display: flex; align-items: center; padding: 0 20px;
     justify-content: space-between; border-bottom: 1px solid var(--border);
+    position: relative;
   }
-  .header-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-
-  .user-badge { display: flex; align-items: center; gap: 10px; }
+  .header-left { display: flex; align-items: center; z-index: 10; }
+  .header-center {
+    display: none; /* 默认隐藏，mobile 才显示 */
+  }
+  .header-right { display: flex; align-items: center; gap: 10px; z-index: 10; }
+  
   .user-avatar {
     width: 28px; height: 28px; border-radius: 50%;
     background: #111; color: #fff;
@@ -135,37 +151,36 @@
   .logout-btn {
     font-size: 12px; color: var(--text-muted); background: none;
     border: 1px solid var(--border); border-radius: 6px;
-    padding: 4px 10px; cursor: pointer; font-family: inherit; transition: all 0.15s;
+    padding: 5px 10px; cursor: pointer; transition: all 0.15s; font-family: inherit;
   }
   .logout-btn:hover { border-color: #e53e3e; color: #e53e3e; }
 
   /* ── Chat area ── */
   .chat-container {
-    flex: 1; overflow-y: auto; padding: 24px 24px 160px;
+    flex: 1; overflow-y: auto; padding: 24px 24px 16px;
     scroll-behavior: smooth; display: flex; flex-direction: column; align-items: center;
-    -webkit-overflow-scrolling: touch;  /* iOS 原生顺滑滚动 */
-    touch-action: pan-y;                /* 允许内部上下滑动 */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
   .chat-container::-webkit-scrollbar { width: 5px; }
   .chat-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 5px; }
   .chat-container:hover::-webkit-scrollbar-thumb { background: #ddd; }
 
   .chat-content { width: 100%; max-width: 760px; display: flex; flex-direction: column; }
-  #messageList { display: flex; flex-direction: column; gap: 28px; }
+  #messageList { display: flex; flex-direction: column; gap: 28px; padding-bottom: 24px; }
 
-  /* Empty state */
+  /* ── 3. 空状态 & 提示词排版 (全局/电脑端默认样式) ── */
   .empty-state { display: flex; flex-direction: column; padding-top: 10vh; width: 100%; animation: fadeIn 0.4s ease; }
   .greeting-title { font-size: 36px; font-weight: 600; letter-spacing: -0.03em; color: var(--text-primary); margin-bottom: 8px; }
   .greeting-sub { font-size: 16px; color: var(--text-muted); margin-bottom: 36px; }
-  .suggestions-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 10px; width: 100%; max-width: 400px;
-  }
+  
+  /* 电脑端默认：网格排列 */
+  .suggestions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
   .suggestion-card {
     background: var(--surface); padding: 14px 16px; border-radius: 12px;
     border: 1px solid var(--border); text-align: left; cursor: pointer;
     font-size: 13.5px; color: var(--text-secondary); transition: all 0.15s;
-    line-height: 1.5; font-family: inherit;
+    line-height: 1.5; font-family: inherit; width: 100%;
   }
   .suggestion-card:hover { background: #ebebeb; border-color: #d0d0d0; }
 
@@ -213,7 +228,7 @@
     border: 1px solid var(--border);
   }
 
-  /* Input area */
+  /* ── 4. 输入区域排版 ── */
   .input-area {
     position: absolute; bottom: 0; left: 0; right: 0;
     background: linear-gradient(to top, #fff 75%, transparent);
@@ -221,8 +236,10 @@
   }
   .input-box-wrapper {
     width: 100%; max-width: 760px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 14px;
-    padding: 6px 6px 6px 14px; display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border); 
+    border-radius: 14px; 
+    padding: 6px 6px 6px 14px; 
+    display: flex; align-items: center; gap: 6px;
     transition: all 0.2s;
   }
   .input-box-wrapper:focus-within { background: #fff; border-color: #bbb; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
@@ -230,7 +247,7 @@
   .input-box::placeholder { color: var(--text-muted); }
 
   .upload-btn {
-    width: 34px; height: 34px; border-radius: 8px; background: transparent;
+    width: 34px; height: 34px; border-radius: 50%; background: transparent;
     border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
     color: var(--text-muted); flex-shrink: 0; transition: all 0.15s;
   }
@@ -238,7 +255,7 @@
   .upload-btn.has-file { color: var(--text-primary); }
 
   .send-btn {
-    width: 36px; height: 36px; border-radius: 8px; background: var(--text-primary);
+    width: 36px; height: 36px; border-radius: 50%; background: var(--text-primary);
     color: #fff; border: none; cursor: pointer; display: flex; align-items: center;
     justify-content: center; transition: all 0.15s; flex-shrink: 0;
   }
@@ -252,30 +269,16 @@
     font-size: 12px; color: #999; margin-bottom: 4px;
     display: flex; align-items: center; gap: 6px;
   }
-  /* Sequential dots: "" → "." → ".." → "..." → loop */
-  .stream-status .dots-loading {
-    display: inline-block; width: 14px; text-align: left;
-  }
-  .stream-status .dots-loading::after {
-    content: '';
-    animation: dotsStep 1.4s steps(1, end) infinite;
-  }
-  @keyframes dotsStep {
-    0%   { content: ''; }
-    25%  { content: '.'; }
-    50%  { content: '..'; }
-    75%  { content: '...'; }
-  }
+  .stream-status .dots-loading { display: inline-block; width: 14px; text-align: left; }
+  .stream-status .dots-loading::after { content: ''; animation: dotsStep 1.4s steps(1, end) infinite; }
+  @keyframes dotsStep { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
 
   /* Drag-and-drop overlay */
   .drop-overlay {
-    display: none;
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(255,255,255,0.92);
-    z-index: 100;
+    display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.92); z-index: 100;
     align-items: center; justify-content: center; flex-direction: column; gap: 12px;
-    border: 3px dashed #bbb; border-radius: 16px; margin: 12px;
-    pointer-events: none;
+    border: 3px dashed #bbb; border-radius: 16px; margin: 12px; pointer-events: none;
   }
   .drop-overlay.active { display: flex; }
   .drop-overlay-icon { font-size: 40px; }
@@ -307,43 +310,18 @@
   .export-excel-btn:hover { background: #333; }
 
   /* Login */
-  #loginScreen {
-    position: fixed; inset: 0; z-index: 1000;
-    background: #fafafa;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .login-card {
-    background: #fff; border: 1px solid #eaeaea; border-radius: 16px;
-    padding: 48px 40px; width: 100%; max-width: 380px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.04);
-    animation: fadeIn 0.4s ease;
-    display: flex; flex-direction: column; align-items: center;
-  }
-  .login-logo-icon {
-    width: 52px; height: 52px; background: #111; color: #fff;
-    border-radius: 14px; display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 20px;
-  }
+  #loginScreen { position: fixed; inset: 0; z-index: 1000; background: #fafafa; display: flex; align-items: center; justify-content: center; }
+  .login-card { background: #fff; border: 1px solid #eaeaea; border-radius: 16px; padding: 48px 40px; width: 100%; max-width: 380px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); animation: fadeIn 0.4s ease; display: flex; flex-direction: column; align-items: center; }
+  .login-logo-icon { width: 52px; height: 52px; background: #111; color: #fff; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
   .login-title { font-size: 24px; font-weight: 600; color: #111; letter-spacing: -0.5px; margin-bottom: 6px; text-align: center; }
   .login-subtitle { font-size: 14px; color: #888; margin-bottom: 32px; text-align: center; }
   .login-field { width: 100%; margin-bottom: 14px; }
-  .login-field input {
-    width: 100%; padding: 13px 16px; border: 1px solid #e0e0e0;
-    border-radius: 10px; font-size: 14.5px; color: #111;
-    outline: none; transition: all 0.2s; background: #fafafa; font-family: inherit;
-  }
+  .login-field input { width: 100%; padding: 13px 16px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 14.5px; color: #111; outline: none; transition: all 0.2s; background: #fafafa; font-family: inherit; }
   .login-field input:focus { border-color: #111; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
-  .login-btn {
-    width: 100%; padding: 14px; background: #111; color: #fff;
-    border: none; border-radius: 10px; font-size: 15px; font-weight: 500;
-    cursor: pointer; margin-top: 6px; font-family: inherit; transition: background 0.2s;
-  }
+  .login-btn { width: 100%; padding: 14px; background: #111; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 6px; font-family: inherit; transition: background 0.2s; }
   .login-btn:hover { background: #333; }
   .login-btn:disabled { background: #aaa; cursor: not-allowed; }
-  .login-error {
-    width: 100%; text-align: center; background: #fef2f2; color: #dc2626;
-    padding: 11px; border-radius: 8px; font-size: 13px; margin-bottom: 18px; display: none;
-  }
+  .login-error { width: 100%; text-align: center; background: #fef2f2; color: #dc2626; padding: 11px; border-radius: 8px; font-size: 13px; margin-bottom: 18px; display: none; }
   .login-footer { font-size: 11.5px; color: #bbb; text-align: center; margin-top: 20px; line-height: 1.6; }
 
   /* Animations */
@@ -351,157 +329,104 @@
   @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
 
   /* Mode toggle */
-  .mode-toggle-wrap {
-    display: none;
-    margin-top: 12px;
-    padding: 12px;
-    background: #f7f7f7;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-  }
+  .mode-toggle-wrap { display: none; margin-top: 12px; padding: 12px; background: #f7f7f7; border: 1px solid var(--border); border-radius: 10px; }
   .mode-toggle-wrap.visible { display: block; }
-  .mode-toggle-label {
-    font-size: 11px; font-weight: 600; color: #999;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    margin-bottom: 8px; display: block;
-  }
-  .mode-toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  .mode-toggle-label { font-size: 11px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; display: block; }
+  .mode-toggle-row { display: flex; align-items: center; justify-content: space-between; }
   .mode-toggle-text { font-size: 13px; color: var(--text-primary); font-weight: 500; }
   .mode-toggle-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
-  .toggle-switch {
-    position: relative; width: 40px; height: 22px; flex-shrink: 0;
-  }
+  .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
   .toggle-switch input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider {
-    position: absolute; inset: 0; background: #ddd;
-    border-radius: 22px; cursor: pointer; transition: background 0.2s;
-  }
-  .toggle-slider:before {
-    content: ''; position: absolute;
-    width: 16px; height: 16px; left: 3px; bottom: 3px;
-    background: #fff; border-radius: 50%; transition: transform 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
+  .toggle-slider { position: absolute; inset: 0; background: #ddd; border-radius: 22px; cursor: pointer; transition: background 0.2s; }
+  .toggle-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
   .toggle-switch input:checked + .toggle-slider { background: #111; }
   .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); }
 
   .doc-dl-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 6px; padding: 7px 14px;
-    background: #111; color: #fff;
-    border: none; border-radius: 7px;
-    font-size: 12.5px; font-weight: 500;
-    cursor: pointer; font-family: inherit;
-    transition: background 0.15s; letter-spacing: 0.01em;
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 7px 14px;
+    background: #111; color: #fff; border: none; border-radius: 7px; font-size: 12.5px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.15s; letter-spacing: 0.01em;
   }
   .doc-dl-btn:hover { background: #333; }
 
   /* ── Mobile menu (hamburger) ── */
   .menu-btn {
-    display: none;
-    width: 36px; height: 36px; border-radius: 8px;
+    display: none; width: 36px; height: 36px; border-radius: 8px;
     background: transparent; border: none; cursor: pointer;
     align-items: center; justify-content: center;
-    color: var(--text-primary); flex-shrink: 0;
-    margin-right: 4px; padding: 0;
+    color: var(--text-primary); flex-shrink: 0; padding: 0;
   }
   .menu-btn:active { background: #f0f0f0; }
 
-  /* Backdrop shown when sidebar drawer is open on mobile */
-  .sidebar-backdrop {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.35);
-    z-index: 90;
-    opacity: 0; transition: opacity 0.2s;
-  }
+  .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 90; opacity: 0; transition: opacity 0.2s; }
   .sidebar-backdrop.visible { display: block; opacity: 1; }
 
-  /* ── Mobile breakpoint ──
-     Trigger on either: narrow viewport (<=768px) OR a coarse-pointer device
-     (phones/tablets in landscape). This is what makes iPhone landscape — which
-     is ~844px wide — still get the hamburger menu and drawer. */
+  /* ── Mobile breakpoint ── */
   @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
     .menu-btn { display: flex; }
 
-    /* Sidebar becomes a slide-in drawer (Today/Yesterday groups stay visible inside) */
     .sidebar {
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-      width: 84vw; max-width: 320px;
-      z-index: 100;
-      transform: translateX(-100%);
-      transition: transform 0.25s ease;
-      box-shadow: 2px 0 16px rgba(0,0,0,0.08);
-      /* Respect notch/home bar */
-      padding-top: calc(16px + env(safe-area-inset-top));
-      padding-left: calc(10px + env(safe-area-inset-left));
-      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      position: fixed; top: 0; left: 0; bottom: 0; width: 84vw; max-width: 320px; z-index: 100;
+      transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 2px 0 16px rgba(0,0,0,0.08);
+      padding-top: calc(16px + env(safe-area-inset-top)); padding-left: calc(10px + env(safe-area-inset-left)); padding-bottom: calc(16px + env(safe-area-inset-bottom));
     }
     .sidebar.open { transform: translateX(0); }
 
-    /* Header: tighten and add safe-area top padding */
-    .header {
-      padding: 0 16px;
-      padding-top: env(safe-area-inset-top);
-      height: calc(56px + env(safe-area-inset-top));
+    .header { padding: 0 16px; padding-top: env(safe-area-inset-top); height: calc(56px + env(safe-area-inset-top)); border-bottom: none; position: relative; }
+    /* Mobile header: 居中标题，隐藏桌面元素 */
+    .header-title { display: none; }
+    .header-center {
+      display: block; position: absolute; left: 50%; transform: translateX(-50%);
+      font-size: 16px; font-weight: 600; color: var(--text-primary); pointer-events: none;
     }
-    .role-badge { display: none; }
-    .logout-btn { padding: 4px 8px; font-size: 11px; }
-    .user-name {
-      max-width: 90px;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-
-    /* Chat area */
+    .user-name, .role-badge, .logout-btn, .online-dot { display: none !important; }
+    .header-right { gap: 0; }
+    
     .chat-container { padding: 16px 14px 16px; }
     .chat-content { max-width: 100%; }
     #messageList { gap: 22px; }
 
-    /* Empty state */
     .greeting-title { font-size: 28px; margin-bottom: 6px; }
     .greeting-sub { font-size: 14px; color: #888; margin-bottom: 24px; }
     .empty-state { padding-top: 6vh; }
-    .suggestions-grid { flex-direction: column; align-items: flex-start; gap: 8px; max-width: 100%; }
-    .suggestion-card { width: fit-content; font-size: 12.5px; padding: 10px 16px; border-radius: 100px; }
+    
+    /* 核心修改：仅在手机端启用竖排 + 胶囊样式 */
+    .suggestions-grid { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: flex-start; /* 靠左对齐，宽度自适应 */
+      gap: 10px; 
+    }
+    .suggestion-card { 
+      width: fit-content; 
+      border-radius: 100px; /* 变成彻底的胶囊形 */
+      padding: 10px 18px; 
+      font-size: 13.5px; 
+    }
 
-    /* Message bubbles */
     .message-content { max-width: 88%; font-size: 15px; }
     .message-wrapper.user .message-content { padding: 10px 14px; }
 
-    /* 输入区域 */
     .input-area {
-      position: relative;
-      flex-shrink: 0;
-      background: linear-gradient(to top, var(--bg) 70%, transparent);
-      border-top: none;
-      padding: 8px 12px calc(8px + var(--safe-bottom));
-      bottom: auto;
-      transition: none;
+      position: relative; flex-shrink: 0;
+      background: var(--bg); border-top: none;
+      padding: 8px 12px calc(8px + var(--safe-bottom)); 
     }
-    .input-box-wrapper { border-radius: 24px; padding: 5px 5px 5px 16px; }
+    .input-box-wrapper { border-radius: 24px; padding: 5px 5px 5px 14px; }
     .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
-    /* 手机端隐藏底部 disclaimer 那行 */
     .disclaimer { display: none; }
 
-    /* Login card */
-    .login-card {
-      padding: 36px 26px;
-      margin: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-    }
+    .login-card { padding: 36px 26px; margin: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
     .login-title { font-size: 22px; }
     .login-field input { font-size: 16px; }
 
-    /* Tables: tighter on mobile */
     .md-table th, .md-table td { padding: 8px 10px; font-size: 12.5px; }
   }
 
-  /* Desktop only: hide hamburger/backdrop. Non-coarse pointer = mouse, not touch. */
   @media (min-width: 769px) and (pointer: fine) {
     .menu-btn, .sidebar-backdrop { display: none !important; }
+    .sidebar-footer { display: none; }
+    .header-center { display: none; }
   }
 </style>
 </head>
@@ -548,20 +473,30 @@
   </div>
 
   <div id="historyList" class="history-list" style="margin-top:12px"></div>
+  
+  <div class="sidebar-footer">
+    <button class="logout-btn-sidebar" onclick="doLogout()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </button>
+  </div>
 </div>
 
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
 <div class="main-content">
   <div class="header">
-    <div style="display:flex;align-items:center;gap:4px;min-width:0">
+    <div class="header-left">
       <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Open menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="header-title">Chumart AI</div>
+      <div class="header-title" style="font-size:15px;font-weight:600;color:var(--text-primary)">Chumart AI</div>
     </div>
-    <div class="user-badge" id="userBadge">
-      <span style="width:7px;height:7px;background:#22c55e;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+    
+    <div class="header-center">Chumart AI</div>
+    
+    <div class="header-right" id="userBadge">
+      <span class="online-dot" style="width:7px;height:7px;background:#22c55e;border-radius:50%;display:inline-block;flex-shrink:0"></span>
       <div class="user-avatar" id="userAvatar">?</div>
       <span class="user-name" id="userName"></span>
       <span class="role-badge" id="roleBadge"></span>
@@ -594,7 +529,7 @@
     <div class="input-box-wrapper">
       <input type="file" id="fileInput" accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg,.webp" style="display:none" onchange="handleFileSelect(event)">
       <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()" title="Attach file">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
       </button>
       <input class="input-box" id="inputBox" placeholder="Ask a question..." autocomplete="off"
         onkeydown="handleKey(event)" onpaste="handlePaste(event)">
@@ -606,7 +541,6 @@
   </div>
 </div>
 
-<!-- Login -->
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo-icon">
@@ -631,14 +565,39 @@
 <script>
   const BACKEND = 'https://chumart-ai.up.railway.app';
 
-  // ── iOS 焦点处理: 等键盘动画完成后再滚动到底部 ──
+  // ── iOS PWA 终极键盘接管逻辑 ──
+  const vv = window.visualViewport;
+  
+  function updateAppHeight() {
+    if (!vv) return;
+    // 强制赋予肉眼可见的真实高度
+    document.documentElement.style.setProperty('--app-height', `${vv.height}px`);
+    
+    // 键盘弹起检测：如果可视高度大幅度变小
+    if (vv.height < window.screen.height - 150) {
+      document.documentElement.style.setProperty('--safe-bottom', '0px'); // 弹起时去掉小白条避让
+    } else {
+      document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom)'); // 收起时恢复
+    }
+    
+    // 强行把可能被 Safari 顶上去的页面拉回原位
+    window.scrollTo(0, 0); 
+  }
+
+  if (vv) {
+    vv.addEventListener('resize', updateAppHeight);
+    vv.addEventListener('scroll', updateAppHeight);
+    updateAppHeight();
+  }
+
+  // ── 焦点处理: 等待键盘动画结束后滚动到底部 ──
   document.addEventListener('focusin', (e) => {
     if (e.target && e.target.id === 'inputBox') {
       setTimeout(() => {
         window.scrollTo(0, 0);
         const c = document.getElementById('messagesContainer');
         if (c) c.scrollTop = c.scrollHeight;
-      }, 300); // 等待 iOS 键盘动画完毕
+      }, 300);
     }
   });
 
@@ -648,7 +607,7 @@
     }
   });
 
-  // ── Mobile sidebar drawer ─────────────────────────────────────────────────
+  // ── Mobile sidebar drawer ──
   function openSidebar() {
     document.getElementById('sidebar').classList.add('open');
     document.getElementById('sidebarBackdrop').classList.add('visible');
@@ -662,10 +621,7 @@
     if (sb.classList.contains('open')) closeSidebar(); else openSidebar();
   }
   function maybeCloseSidebarOnMobile() {
-    // Match the CSS: narrow viewport OR coarse-pointer device (phone landscape, tablet)
-    const isMobile = window.matchMedia(
-      '(max-width: 768px), (pointer: coarse) and (max-width: 1024px)'
-    ).matches;
+    const isMobile = window.matchMedia('(max-width: 768px), (pointer: coarse) and (max-width: 1024px)').matches;
     if (isMobile) closeSidebar();
   }
 
@@ -676,12 +632,9 @@
   let currentUser = null;
   let selectedModel = 'claude-haiku-4-5-20251001';
   let freeMode = false;
-  let currentAbortController = null;  // SSE abort controller
+  let currentAbortController = null;
 
-  function onModelChange(val) {
-    selectedModel = val;
-  }
-
+  function onModelChange(val) { selectedModel = val; }
   function onFreeModeChange(checked) {
     freeMode = checked;
     document.getElementById('modeLabel').textContent = checked ? '🎲 Free Mode' : 'Work Mode';
@@ -697,34 +650,18 @@
   const filePrev = document.getElementById('filePreviewBar');
   const uploadBtn= document.getElementById('uploadBtn');
 
-  // ── Init ──────────────────────────────────────────────────────────────────
-
-  // 检测是否手机端: 屏幕宽度 < 768px 或 userAgent 含手机标识
-  const IS_MOBILE = (window.innerWidth < 768) ||
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-  // 手机端用 localStorage (持久化, 30天免登录), 电脑端用 sessionStorage (关闭浏览器即清空)
+  // 检测手机端
+  const IS_MOBILE = (window.innerWidth < 768) || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   const userStore = IS_MOBILE ? localStorage : sessionStorage;
 
   window.addEventListener('load', () => {
-    // 迁移: 旧版本可能存在 sessionStorage 里, 手机端需要兼容一下
     let user = userStore.getItem('chumart_user');
     if (!user && IS_MOBILE) {
-      // 手机端尝试从 sessionStorage 找(老版本数据)
       user = sessionStorage.getItem('chumart_user');
-      if (user) {
-        localStorage.setItem('chumart_user', user);
-        sessionStorage.removeItem('chumart_user');
-      }
+      if (user) { localStorage.setItem('chumart_user', user); sessionStorage.removeItem('chumart_user'); }
     }
-    if (user) {
-      currentUser = JSON.parse(user);
-      showApp(); // async — loads sessions from DB
-    }
-    // No user → login screen stays visible
+    if (user) { currentUser = JSON.parse(user); showApp(); }
   });
-
-  // ── Session management ────────────────────────────────────────────────────
 
   function newChat() {
     currentSessionId = Date.now().toString();
@@ -761,42 +698,29 @@
     s.history = history;
     localStorage.setItem('chumartChats', JSON.stringify(allSessions));
     renderSidebar();
-    // Also persist to DB (fire and forget)
     if (currentUser?.uid) {
-      fetch(`${BACKEND}/sessions/${currentSessionId}`, {
-        method: 'DELETE',
-        // We re-save via chat endpoint, this is just for delete tracking
-      }).catch(()=>{});
+      fetch(`${BACKEND}/sessions/${currentSessionId}`, { method: 'DELETE' }).catch(()=>{});
     }
   }
 
   function deleteSession(id) {
     allSessions = allSessions.filter(s => s.id !== id);
     localStorage.setItem('chumartChats', JSON.stringify(allSessions));
-    // Delete from DB
-    if (currentUser?.uid) {
-      fetch(`${BACKEND}/sessions/${id}?uid=${currentUser.uid}`, { method: 'DELETE' }).catch(()=>{});
-    }
-    if (currentSessionId === id) {
-      allSessions.length ? loadSession(allSessions[0].id) : newChat();
-    } else renderSidebar();
+    if (currentUser?.uid) fetch(`${BACKEND}/sessions/${id}?uid=${currentUser.uid}`, { method: 'DELETE' }).catch(()=>{});
+    if (currentSessionId === id) allSessions.length ? loadSession(allSessions[0].id) : newChat(); else renderSidebar();
   }
 
   function renderSidebar() {
     histEl.innerHTML = '';
     if (!allSessions.length) return;
-
-    // Group sessions by date
     const now = new Date();
     const todayStr = now.toDateString();
     const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
     const yesterdayStr = yesterday.toDateString();
     const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
-
     const groups = { 'Today': [], 'Yesterday': [], 'This Week': [], 'Earlier': [] };
 
     allSessions.forEach(s => {
-      // Parse session date from ID (timestamp) or updated_at
       let d;
       if (s.updated_at) d = new Date(s.updated_at);
       else if (typeof s.id === 'string' && /^\d{13}$/.test(s.id)) d = new Date(parseInt(s.id));
@@ -822,61 +746,35 @@
         span.textContent = s.title;
         span.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0';
         const del = document.createElement('button');
-        del.className = 'trash-btn';
-        del.textContent = '✕';
+        del.className = 'trash-btn'; del.textContent = '✕';
         del.onclick = e => { e.stopPropagation(); deleteSession(s.id); };
-        d.appendChild(span);
-        d.appendChild(del);
+        d.appendChild(span); d.appendChild(del);
         d.onclick = () => loadSession(s.id);
         histEl.appendChild(d);
       });
     }
   }
 
-  // ── Input helpers ─────────────────────────────────────────────────────────
-
-  input.addEventListener('input', () => {
-    // Don't override Stop button during streaming
-    if (busy) return;
-    sendBtn.disabled = !input.value.trim() || isUploading;
-  });
+  input.addEventListener('input', () => { if (busy) return; sendBtn.disabled = !input.value.trim() || isUploading; });
   function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
   function quickSend(t) { input.value = t; sendMessage(); }
   function scrollBottom() { msgCont.scrollTop = msgCont.scrollHeight; }
   function hideEmpty() { emptyEl.style.display = 'none'; }
 
-  // ── File handling ─────────────────────────────────────────────────────────
-
-  // Drag-and-drop support
   const mainContent = document.querySelector('.main-content');
   const dropOverlay = document.getElementById('dropOverlay');
   let dragCounter = 0;
 
-  mainContent.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    dragCounter++;
-    if (dragCounter === 1) dropOverlay.classList.add('active');
-  });
-  mainContent.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    dragCounter--;
-    if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); }
-  });
-  mainContent.addEventListener('dragover', (e) => {
-    e.preventDefault();
-  });
+  mainContent.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; if (dragCounter === 1) dropOverlay.classList.add('active'); });
+  mainContent.addEventListener('dragleave', (e) => { e.preventDefault(); dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); } });
+  mainContent.addEventListener('dragover', (e) => { e.preventDefault(); });
   mainContent.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    dragCounter = 0;
-    dropOverlay.classList.remove('active');
+    e.preventDefault(); dragCounter = 0; dropOverlay.classList.remove('active');
     const files = e.dataTransfer && e.dataTransfer.files;
     if (files && files.length > 0) {
       const file = files[0];
-      // For images, store local preview
       if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (ev) => { window._pastePreview = ev.target.result; };
-        reader.readAsDataURL(file);
+        const reader = new FileReader(); reader.onload = (ev) => { window._pastePreview = ev.target.result; }; reader.readAsDataURL(file);
       }
       await uploadFile(file);
     }
@@ -884,9 +782,7 @@
 
   async function handleFileSelect(event) {
     const file = event.target.files[0];
-    if (!file) return;
-    event.target.value = '';
-    await uploadFile(file);
+    if (!file) return; event.target.value = ''; await uploadFile(file);
   }
 
   async function handlePaste(event) {
@@ -898,35 +794,24 @@
         const ext = item.type.split('/')[1] || 'png';
         const blob = item.getAsFile();
         const file = new File([blob], `paste_${Date.now()}.${ext}`, { type: item.type });
-        // Store local preview before uploading
-        const reader = new FileReader();
-        reader.onload = (e) => { window._pastePreview = e.target.result; };
-        reader.readAsDataURL(blob);
-        await uploadFile(file);
-        return;
+        const reader = new FileReader(); reader.onload = (e) => { window._pastePreview = e.target.result; }; reader.readAsDataURL(blob);
+        await uploadFile(file); return;
       }
     }
   }
 
   async function uploadFile(file) {
-    isUploading = true;
-    sendBtn.disabled = true;
-    uploadBtn.classList.add('has-file');
+    isUploading = true; sendBtn.disabled = true; uploadBtn.classList.add('has-file');
     showFilePreview(null, file.name, true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
+      const fd = new FormData(); fd.append('file', file);
       const res = await fetch(BACKEND + '/extract-file', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.error) { clearAttachment(); alert('Upload failed: ' + data.error); return; }
       attachedFile = { name: data.name || file.name, content: data.text || '', fileId: data.file_id || '', isImage: data.is_image || false, previewUrl: data.preview_url || '' };
       showFilePreview(attachedFile.name, null, false, attachedFile.previewUrl);
-    } catch (e) {
-      clearAttachment(); alert('Upload error: ' + e.message);
-    } finally {
-      isUploading = false;
-      sendBtn.disabled = !input.value.trim();
-    }
+    } catch (e) { clearAttachment(); alert('Upload error: ' + e.message); } 
+    finally { isUploading = false; sendBtn.disabled = !input.value.trim(); }
   }
 
   function showFilePreview(name, raw, uploading, previewUrl) {
@@ -937,35 +822,18 @@
       const imgPreview = previewUrl
         ? `<img src="${previewUrl}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid #e8e8e8;flex-shrink:0">`
         : `<div class="file-chip-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>`;
-      filePrev.innerHTML = `<div class="file-chip">
-        ${imgPreview}
-        <span class="file-chip-name">${escHtml(name)}</span>
-        <button class="file-chip-remove" onclick="clearAttachment()">✕</button>
-      </div>`;
+      filePrev.innerHTML = `<div class="file-chip">${imgPreview}<span class="file-chip-name">${escHtml(name)}</span><button class="file-chip-remove" onclick="clearAttachment()">✕</button></div>`;
     }
   }
 
-  function clearAttachment() {
-    attachedFile = null; isUploading = false;
-    filePrev.style.display = 'none'; filePrev.innerHTML = '';
-    uploadBtn.classList.remove('has-file');
-  }
-
-  // ── Message rendering ─────────────────────────────────────────────────────
+  function clearAttachment() { attachedFile = null; isUploading = false; filePrev.style.display = 'none'; filePrev.innerHTML = ''; uploadBtn.classList.remove('has-file'); }
 
   function renderUserMsgDOM(text, fileName, imagePreview) {
-    hideEmpty();
-    const row = document.createElement('div');
-    row.className = 'message-wrapper user';
+    hideEmpty(); const row = document.createElement('div'); row.className = 'message-wrapper user';
     let fileHtml = '';
     if (fileName) {
-      if (imagePreview) {
-        fileHtml = `<div style="margin-bottom:8px"><img src="${imagePreview}" style="max-width:240px;max-height:180px;border-radius:10px;border:1px solid #e8e8e8;cursor:pointer" onclick="showImageOverlay(this.src)"></div>`;
-      } else {
-        fileHtml = `<div class="file-attachment-bubble">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-          ${escHtml(fileName)}</div>`;
-      }
+      if (imagePreview) { fileHtml = `<div style="margin-bottom:8px"><img src="${imagePreview}" style="max-width:240px;max-height:180px;border-radius:10px;border:1px solid #e8e8e8;cursor:pointer" onclick="showImageOverlay(this.src)"></div>`; } 
+      else { fileHtml = `<div class="file-attachment-bubble"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>${escHtml(fileName)}</div>`; }
     }
     const initials = currentUser ? (currentUser.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : 'ME';
     row.innerHTML = `<div class="avatar user-av">${initials}</div><div class="message-content">${fileHtml}${escHtml(text)}</div>`;
@@ -973,585 +841,223 @@
   }
 
   function renderBotMsgDOM(text, isError) {
-    const row = document.createElement('div');
-    row.className = 'message-wrapper bot';
+    const row = document.createElement('div'); row.className = 'message-wrapper bot';
     const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
-
-    // Commission export button — detect salesperson name if present
-    let extraBtn = '';
-    const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
+    let extraBtn = ''; const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
     if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
-      const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
-      // Detect specific salesperson: match "Name 2026年" or "Name在2026年" or "Name的" patterns
-      const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|\s)\s*\d{4}\s*年/);
-      let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
-      let label = `Download Excel · ${y}年${m}月 Full Report`;
+      const y = ymMatch[1], m = ymMatch[2].padStart(2,'0'); const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|\s)\s*\d{4}\s*年/);
+      let url = `${BACKEND}/export/commission?year=${y}&month=${m}`; let label = `Download Excel · ${y}年${m}月 Full Report`;
       const excludeNames = ['PART','Commission','Monthly','Report'];
       if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售')) {
-        const sp = encodeURIComponent(spMatch[1].trim());
-        url += `&salesperson=${sp}`;
-        label = `Download Excel · ${spMatch[1].trim()} ${y}年${m}月`;
+        const sp = encodeURIComponent(spMatch[1].trim()); url += `&salesperson=${sp}`; label = `Download Excel · ${spMatch[1].trim()} ${y}年${m}月`;
       }
-      extraBtn = `<a href="${url}" target="_blank" download
-        style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        ${label}</a>`;
+      extraBtn = `<a href="${url}" target="_blank" download style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>${label}</a>`;
     }
-
     row.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content ${isError?'error-text':''}">${formatText(text)}${extraBtn}</div>`;
     msgList.appendChild(row);
   }
 
-  function showTyping() {
-    const row = document.createElement('div');
-    row.id = 'typingIndicator'; row.className = 'message-wrapper bot';
-    const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
-    row.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content"><div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
-    msgList.appendChild(row);
-    scrollBottom();
-  }
-  function removeTyping() { const t = document.getElementById('typingIndicator'); if (t) t.remove(); }
-
-  // ── Markdown rendering ────────────────────────────────────────────────────
-
-  function escHtml(s) {
-    if (!s) return '';
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+  function escHtml(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   function inlineFormat(text) {
     text = escHtml(text);
-    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
     text = text.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
     text = text.replace(/`([^`]+?)`/g, '<code style="background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:monospace">$1</code>');
-    // Fix AI sometimes outputting file:///docs/... instead of /docs/...
-    text = text.replace(/file:\/\/\/docs\//g, '/docs/');
-    text = text.replace(/file:\/\/\//g, '/');
-
-    // Document download links — relative path /docs/signed-url/{id}
+    text = text.replace(/file:\/\/\/docs\//g, '/docs/'); text = text.replace(/file:\/\/\//g, '/');
     text = text.replace(/\[([^\]]+)\]\(\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
-      let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
-      if (!cleanLabel) cleanLabel = 'Download';
+      let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim(); if (!cleanLabel) cleanLabel = 'Download';
       return `<button class="doc-dl-btn" onclick="downloadSignedDoc('${docId}','${label}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>${cleanLabel}</button>`;
     });
-    // Document download links — full URL https://.../docs/signed-url/{id}
     text = text.replace(/\[([^\]]+)\]\(https?:\/\/[^)]*\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
-      let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
-      if (!cleanLabel) cleanLabel = 'Download';
+      let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim(); if (!cleanLabel) cleanLabel = 'Download';
       return `<button class="doc-dl-btn" onclick="downloadSignedDoc('${docId}','${label}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>${cleanLabel}</button>`;
     });
-    // Regular links [text](url) — must come AFTER signed-url handling
     text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:#111;text-decoration:underline;font-weight:500">$1</a>');
-    // Bare URLs (not already inside an href)
     text = text.replace(/(?<!href=["'])(?<!src=["'])(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank" style="color:#2563eb;text-decoration:underline;word-break:break-all">$1</a>');
     return text;
   }
 
-
   async function downloadSignedDoc(docId, label) {
-    // Backend returns 302 redirect directly to R2 presigned URL
     const url = `${BACKEND}/docs/signed-url/${docId}`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const a = document.createElement('a'); a.href = url; a.target = '_blank';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
   function parseMarkdownTable(lines, startIdx) {
-    if (!lines[startIdx].includes('|')) return null;
-    const headers = lines[startIdx].split('|').slice(1,-1).map(s => s.trim());
-    if (!headers.length) return null;
-    if (startIdx+1 >= lines.length || !/^[\|:\-\s]+$/.test(lines[startIdx+1])) return null;
-    const rows = [];
-    let i = startIdx + 2;
-    while (i < lines.length && lines[i].includes('|')) {
-      rows.push(lines[i].split('|').slice(1,-1).map(s => s.trim()));
-      i++;
-    }
+    if (!lines[startIdx].includes('|')) return null; const headers = lines[startIdx].split('|').slice(1,-1).map(s => s.trim());
+    if (!headers.length) return null; if (startIdx+1 >= lines.length || !/^[\|:\-\s]+$/.test(lines[startIdx+1])) return null;
+    const rows = []; let i = startIdx + 2;
+    while (i < lines.length && lines[i].includes('|')) { rows.push(lines[i].split('|').slice(1,-1).map(s => s.trim())); i++; }
     return { headers, rows, endIdx: i };
   }
 
   let _tblN = 0;
   function renderTable(headers, rows, title) {
-    const tid = 'tbl_' + (++_tblN);
-    const fname = (title||'report') + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+    const tid = 'tbl_' + (++_tblN); const fname = (title||'report') + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
     let html = `<div class="md-table-wrap"><table class="md-table" id="${tid}"><thead><tr>`;
-    html += headers.map(h => `<th>${inlineFormat(h)}</th>`).join('');
-    html += '</tr></thead><tbody>';
-    rows.forEach(r => {
-      html += '<tr>' + headers.map((_,i) => `<td>${inlineFormat(r[i]||'')}</td>`).join('') + '</tr>';
-    });
-    html += `</tbody></table>`;
-    html += `<button class="export-excel-btn" onclick="exportTableToExcel('${tid}','${fname}')">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-      Export Excel</button></div>`;
+    html += headers.map(h => `<th>${inlineFormat(h)}</th>`).join(''); html += '</tr></thead><tbody>';
+    rows.forEach(r => { html += '<tr>' + headers.map((_,i) => `<td>${inlineFormat(r[i]||'')}</td>`).join('') + '</tr>'; });
+    html += `</tbody></table><button class="export-excel-btn" onclick="exportTableToExcel('${tid}','${fname}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Export Excel</button></div>`;
     return html;
   }
-
   function exportTableToExcel(tid, fname) {
-    const tbl = document.getElementById(tid);
-    if (!tbl || typeof XLSX === 'undefined') return;
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.table_to_sheet(tbl);
-    XLSX.utils.book_append_sheet(wb, ws, 'Report');
-    XLSX.writeFile(wb, fname);
+    const tbl = document.getElementById(tid); if (!tbl || typeof XLSX === 'undefined') return;
+    const wb = XLSX.utils.book_new(); const ws = XLSX.utils.table_to_sheet(tbl);
+    XLSX.utils.book_append_sheet(wb, ws, 'Report'); XLSX.writeFile(wb, fname);
   }
 
   function formatText(text) {
-    if (!text) return '';
-    const lines = text.split('\n');
-    const out = [];
-    let inList = false, i = 0, tableTitle = '';
+    if (!text) return ''; const lines = text.split('\n'); const out = []; let inList = false, i = 0, tableTitle = '';
     while (i < lines.length) {
-      const line = lines[i];
-      const hm = line.match(/^(#{1,3})\s+(.*)/);
+      const line = lines[i]; const hm = line.match(/^(#{1,3})\s+(.*)/);
       if (hm) {
-        tableTitle = hm[2].replace(/[^a-z0-9]/gi,'_').toLowerCase();
-        if (inList) { out.push('</ul>'); inList = false; }
+        tableTitle = hm[2].replace(/[^a-z0-9]/gi,'_').toLowerCase(); if (inList) { out.push('</ul>'); inList = false; }
         const sz = hm[1].length === 1 ? 17 : hm[1].length === 2 ? 15.5 : 14;
-        out.push(`<div style="font-weight:600;font-size:${sz}px;margin:14px 0 5px;color:#111">${inlineFormat(hm[2])}</div>`);
-        i++; continue;
+        out.push(`<div style="font-weight:600;font-size:${sz}px;margin:14px 0 5px;color:#111">${inlineFormat(hm[2])}</div>`); i++; continue;
       }
       if (line.includes('|') && i+1 < lines.length && /^[\|:\-\s]+$/.test(lines[i+1])) {
-        if (inList) { out.push('</ul>'); inList = false; }
-        const tbl = parseMarkdownTable(lines, i);
+        if (inList) { out.push('</ul>'); inList = false; } const tbl = parseMarkdownTable(lines, i);
         if (tbl && tbl.rows.length) { out.push(renderTable(tbl.headers, tbl.rows, tableTitle)); i = tbl.endIdx; continue; }
       }
-      if (line.trim() === '') {
-        if (inList) { out.push('</ul>'); inList = false; }
-        out.push('<div style="height:7px"></div>'); i++; continue;
-      }
-      if (/^---+$/.test(line.trim())) {
-        if (inList) { out.push('</ul>'); inList = false; }
-        out.push('<hr style="border:none;border-top:1px solid #ebebeb;margin:10px 0">'); i++; continue;
-      }
+      if (line.trim() === '') { if (inList) { out.push('</ul>'); inList = false; } out.push('<div style="height:7px"></div>'); i++; continue; }
+      if (/^---+$/.test(line.trim())) { if (inList) { out.push('</ul>'); inList = false; } out.push('<hr style="border:none;border-top:1px solid #ebebeb;margin:10px 0">'); i++; continue; }
       const nm = line.match(/^(\d+)\.\s+(.*)/);
       if (nm) { if (inList) { out.push('</ul>'); inList = false; } out.push(`<div style="display:flex;gap:8px;margin:3px 0;padding-left:2px"><span style="flex-shrink:0;color:#888">${nm[1]}.</span><span>${inlineFormat(nm[2])}</span></div>`); i++; continue; }
       const bm = line.match(/^[\-\*•]\s+(.*)/);
       if (bm) { if (!inList) { out.push('<ul style="margin:4px 0;padding:0;list-style:none">'); inList=true; } out.push(`<li style="display:flex;gap:8px;margin:2px 0;padding-left:10px"><span style="flex-shrink:0;color:#bbb">•</span><span>${inlineFormat(bm[1])}</span></li>`); i++; continue; }
       if (inList) { out.push('</ul>'); inList = false; }
-      out.push(`<div style="margin:4px 0;line-height:1.65">${inlineFormat(line)}</div>`);
-      i++;
+      out.push(`<div style="margin:4px 0;line-height:1.65">${inlineFormat(line)}</div>`); i++;
     }
-    if (inList) out.push('</ul>');
-    return out.join('');
+    if (inList) out.push('</ul>'); return out.join('');
   }
 
-  // ── Send ──────────────────────────────────────────────────────────────────
-
   async function sendMessage() {
-    const msg = input.value.trim();
-    if (!msg || busy || isUploading) return;
-    busy = true; input.value = '';
-    setSendButtonMode('stop');
-
-    const fileForMsg = attachedFile ? { ...attachedFile } : null;
-    clearAttachment();
+    const msg = input.value.trim(); if (!msg || busy || isUploading) return;
+    busy = true; input.value = ''; setSendButtonMode('stop');
+    const fileForMsg = attachedFile ? { ...attachedFile } : null; clearAttachment();
     renderUserMsgDOM(msg, fileForMsg?.name, fileForMsg?.previewUrl || window._pastePreview || null);
-    window._pastePreview = null;
-    if (!history.length) saveSession(msg);
+    window._pastePreview = null; if (!history.length) saveSession(msg);
 
-    // Create the bot message container that we'll stream into
     hideEmpty();
-    const botRow = document.createElement('div');
-    botRow.className = 'message-wrapper bot';
+    const botRow = document.createElement('div'); botRow.className = 'message-wrapper bot';
     const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
-    botRow.innerHTML = `<div class="avatar bot">${icon}</div>
-      <div class="message-content">
-        <div class="stream-status" style="font-size:12px;color:#999;margin-bottom:4px;display:none"></div>
-        <div class="stream-content"></div>
-      </div>`;
+    botRow.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content"><div class="stream-status" style="font-size:12px;color:#999;margin-bottom:4px;display:none"></div><div class="stream-content"><div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div>`;
     msgList.appendChild(botRow);
-    const statusEl = botRow.querySelector('.stream-status');
-    const contentEl = botRow.querySelector('.stream-content');
-    // Initial typing indicator inside content
-    contentEl.innerHTML = `<div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    const statusEl = botRow.querySelector('.stream-status'); const contentEl = botRow.querySelector('.stream-content');
     scrollBottom();
 
     currentAbortController = new AbortController();
-    let fullText = '';
-    let gotFirstText = false;
-    let stopped = false;
-    let pendingFrame = null;
-
-    // ─── Progress narration: evolves the status message as a tool call takes longer ───
-    // Stages: [ [minSec, suffix], ... ]  — suffix is appended after "{toolName}".
-    // Empty suffix = just "{toolName}...".
+    let fullText = '', gotFirstText = false, stopped = false, pendingFrame = null;
     const TOOL_STAGES = {
-      'odoo_search': [
-        [0,  ''],
-        [3,  ' — querying Odoo'],
-        [10, ' — scanning records'],
-        [20, ' — filtering large dataset'],
-        [40, ' — still working, complex query'],
-        [80, ' — hang tight, almost there']
-      ],
-      'odoo_search_products_by_sku': [
-        [0,  ''],
-        [3,  ' — looking up SKUs in Odoo'],
-        [10, ' — matching many products'],
-        [25, ' — large SKU batch, still searching'],
-        [60, ' — hang tight']
-      ],
-      'odoo_get_product_vendors': [
-        [0,  ''],
-        [5,  ' — pulling vendor data'],
-        [15, ' — this is a lot of vendors'],
-        [40, ' — still at it']
-      ],
-      'odoo_update_vendor_price': [
-        [0,  ''],
-        [3,  ' — resolving products'],
-        [8,  ' — looking up supplier records'],
-        [15, ' — writing prices to Odoo'],
-        [30, ' — large update, still writing']
-      ],
-      'odoo_create_bulk_po': [
-        [0,  ''],
-        [3,  ' — building purchase orders'],
-        [10, ' — creating order lines'],
-        [25, ' — validating vendors and products'],
-        [50, ' — nearly done']
-      ],
-      'odoo_write_record': [
-        [0,  ''],
-        [5,  ' — saving to Odoo'],
-        [15, ' — Odoo is slow today']
-      ],
-      'odoo_create_record': [
-        [0,  ''],
-        [5,  ' — creating record in Odoo'],
-        [15, ' — Odoo is slow today']
-      ],
-      'get_monthly_tax': [
-        [0,  ''],
-        [3,  ' — aggregating invoices'],
-        [10, ' — computing tax breakdown'],
-        [25, ' — large month, still crunching']
-      ],
-      'get_quarterly_tax': [
-        [0,  ''],
-        [3,  ' — aggregating quarterly invoices'],
-        [12, ' — computing tax breakdown'],
-        [30, ' — big quarter, still crunching']
-      ],
-      'get_monthly_sales': [
-        [0,  ''],
-        [3,  ' — pulling sales records'],
-        [10, ' — computing commissions'],
-        [25, ' — lots of salespeople, still working']
-      ],
-      'get_missing_tax': [
-        [0,  ''],
-        [3,  ' — scanning CA invoices for missing tax'],
-        [12, ' — deep scan in progress']
-      ],
-      'search_knowledge': [
-        [0,  ''],
-        [3,  ' — searching document library'],
-        [10, ' — ranking passages']
-      ],
-      'web_fetch': [
-        [0,  ''],
-        [3,  ' — fetching page'],
-        [10, ' — parsing content'],
-        [25, ' — slow site, still waiting']
-      ],
-      'web_search': [
-        [0,  ''],
-        [3,  ' — searching the web'],
-        [10, ' — ranking results']
-      ],
-      // Fallback for any tool not listed above
-      '_default': [
-        [0,  ''],
-        [5,  ' — working'],
-        [15, ' — still working'],
-        [30, ' — this is taking a while'],
-        [60, ' — hang tight']
-      ]
+      'odoo_search': [[0, ''],[3, ' — querying Odoo'],[10, ' — scanning records'],[20, ' — filtering large dataset'],[40, ' — still working, complex query'],[80, ' — hang tight, almost there']],
+      '_default': [[0, ''],[5, ' — working'],[15, ' — still working'],[30, ' — this is taking a while'],[60, ' — hang tight']]
     };
+    const THINKING_STAGES = [[0, 'thinking'],[5, 'thinking — analyzing results'],[15, 'thinking — large result set, organizing'],[30, 'thinking — this is a complex one'],[60, 'thinking — hang tight']];
 
-    // Stages for the "thinking" phase (between tool_result and next tool_use or text).
-    const THINKING_STAGES = [
-      [0,  'thinking'],
-      [5,  'thinking — analyzing results'],
-      [15, 'thinking — large result set, organizing'],
-      [30, 'thinking — this is a complex one'],
-      [60, 'thinking — hang tight']
-    ];
-
-    function pickStage(stages, elapsedSec) {
-      let pick = stages[0];
-      for (const s of stages) {
-        if (elapsedSec >= s[0]) pick = s;
-        else break;
-      }
-      return pick;
-    }
-
-    let statusPhase = null;     // 'tool' | 'thinking' | null
-    let statusTool = '';         // tool name during 'tool' phase
-    let statusStartedAt = 0;     // timestamp when current phase started
-    let statusTimer = null;
-
+    function pickStage(stages, elapsedSec) { let pick = stages[0]; for (const s of stages) { if (elapsedSec >= s[0]) pick = s; else break; } return pick; }
+    let statusPhase = null, statusTool = '', statusStartedAt = 0, statusTimer = null;
     function renderStatus() {
-      if (statusPhase === null) {
-        statusEl.style.display = 'none';
-        return;
-      }
-      statusEl.style.display = 'flex';
-      const elapsed = (Date.now() - statusStartedAt) / 1000;
-      if (statusPhase === 'tool') {
-        const stages = TOOL_STAGES[statusTool] || TOOL_STAGES._default;
-        const [, suffix] = pickStage(stages, elapsed);
-        statusEl.innerHTML =
-          `${escHtml(statusTool)}${escHtml(suffix)}<span class="dots-loading"></span>`;
-      } else if (statusPhase === 'thinking') {
-        const [, label] = pickStage(THINKING_STAGES, elapsed);
-        statusEl.innerHTML = `${escHtml(label)}<span class="dots-loading"></span>`;
-      }
+      if (statusPhase === null) { statusEl.style.display = 'none'; return; }
+      statusEl.style.display = 'flex'; const elapsed = (Date.now() - statusStartedAt) / 1000;
+      if (statusPhase === 'tool') { const stages = TOOL_STAGES[statusTool] || TOOL_STAGES._default; const [, suffix] = pickStage(stages, elapsed); statusEl.innerHTML = `${escHtml(statusTool)}${escHtml(suffix)}<span class="dots-loading"></span>`; } 
+      else if (statusPhase === 'thinking') { const [, label] = pickStage(THINKING_STAGES, elapsed); statusEl.innerHTML = `${escHtml(label)}<span class="dots-loading"></span>`; }
     }
-
-    function startStatus(phase, toolName) {
-      statusPhase = phase;
-      statusTool = toolName || '';
-      statusStartedAt = Date.now();
-      renderStatus();
-      if (statusTimer) clearInterval(statusTimer);
-      // Re-render every second so stage messages advance even when no new SSE event arrives
-      statusTimer = setInterval(renderStatus, 1000);
-    }
-
-    function stopStatus() {
-      statusPhase = null;
-      if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
-      statusEl.style.display = 'none';
-    }
+    function startStatus(phase, toolName) { statusPhase = phase; statusTool = toolName || ''; statusStartedAt = Date.now(); renderStatus(); if (statusTimer) clearInterval(statusTimer); statusTimer = setInterval(renderStatus, 1000); }
+    function stopStatus() { statusPhase = null; if (statusTimer) { clearInterval(statusTimer); statusTimer = null; } statusEl.style.display = 'none'; }
 
     const payload = {
       message: msg,
       history: history.map(({ role, content, fileId, fileName, fileContent }) => {
-        const entry = { role, content };
-        if (fileId) entry.file_id = fileId;
-        if (fileName) entry.file_name = fileName;
-        if (fileContent) entry.file_content = fileContent;
-        return entry;
+        const entry = { role, content }; if (fileId) entry.file_id = fileId; if (fileName) entry.file_name = fileName; if (fileContent) entry.file_content = fileContent; return entry;
       }),
-      file_content: fileForMsg?.content || '',
-      file_name: fileForMsg?.name || '',
-      file_id: fileForMsg?.fileId || '',
-      role: currentUser?.role || 'guest',
-      user_name: currentUser?.name || '',
-      user_id: currentUser?.uid || 0,
-      model: selectedModel,
-      free_mode: freeMode,
-      session_id: currentSessionId || '',
-      session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20),
-      session_token: currentUser?.session_token || ''
+      file_content: fileForMsg?.content || '', file_name: fileForMsg?.name || '', file_id: fileForMsg?.fileId || '',
+      role: currentUser?.role || 'guest', user_name: currentUser?.name || '', user_id: currentUser?.uid || 0,
+      model: selectedModel, free_mode: freeMode, session_id: currentSessionId || '',
+      session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20), session_token: currentUser?.session_token || ''
     };
 
     try {
-      const res = await fetch(BACKEND + '/chat/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: currentAbortController.signal
-      });
-
-      if (!res.ok) {
-        const errText = await res.text().catch(() => `HTTP ${res.status}`);
-        contentEl.innerHTML = `<span class="error-text">Server error: ${escHtml(errText.slice(0, 300))}</span>`;
-        return;
-      }
-      if (!res.body) {
-        contentEl.innerHTML = `<span class="error-text">Streaming not supported in this browser.</span>`;
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
+      const res = await fetch(BACKEND + '/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAbortController.signal });
+      if (!res.ok) { const errText = await res.text().catch(() => `HTTP ${res.status}`); contentEl.innerHTML = `<span class="error-text">Server error: ${escHtml(errText.slice(0, 300))}</span>`; return; }
+      if (!res.body) { contentEl.innerHTML = `<span class="error-text">Streaming not supported in this browser.</span>`; return; }
+      const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = '';
       while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        // Parse SSE events: events end with \n\n
-        let idx;
+        const { value, done } = await reader.read(); if (done) break;
+        buffer += decoder.decode(value, { stream: true }); let idx;
         while ((idx = buffer.indexOf('\n\n')) !== -1) {
-          const rawEvent = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 2);
-          const dataLine = rawEvent.split('\n').find(l => l.startsWith('data: '));
-          if (!dataLine) continue;
-          let evt;
-          try { evt = JSON.parse(dataLine.slice(6)); } catch { continue; }
-
+          const rawEvent = buffer.slice(0, idx); buffer = buffer.slice(idx + 2);
+          const dataLine = rawEvent.split('\n').find(l => l.startsWith('data: ')); if (!dataLine) continue;
+          let evt; try { evt = JSON.parse(dataLine.slice(6)); } catch { continue; }
           if (evt.type === 'text') {
-            if (!gotFirstText) {
-              // First text chunk — clear the typing placeholder.
-              // Keep statusEl visible in case the AI calls more tools after this text.
-              contentEl.innerHTML = '';
-              gotFirstText = true;
-            }
+            if (!gotFirstText) { contentEl.innerHTML = ''; gotFirstText = true; }
             fullText += evt.delta || '';
-            // Throttle DOM updates via requestAnimationFrame to avoid jank
-            if (!pendingFrame) {
-              pendingFrame = requestAnimationFrame(() => {
-                contentEl.innerHTML = formatText(fullText);
-                scrollBottom();
-                pendingFrame = null;
-              });
-            }
-          } else if (evt.type === 'tool_use') {
-            // Start the "tool" status phase — renderStatus will keep advancing
-            // the stage message each second based on elapsed time.
-            startStatus('tool', evt.name || '');
-          } else if (evt.type === 'tool_result') {
-            // Tool finished. Switch to the "thinking" phase and restart the clock.
-            // The AI is now analyzing the result and may start streaming text
-            // or call another tool next.
-            startStatus('thinking');
-          } else if (evt.type === 'ping') {
-            // Server heartbeat: no UI change needed.
-          } else if (evt.type === 'error') {
-            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
-            stopStatus();
-            contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') +
-              `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
+            if (!pendingFrame) { pendingFrame = requestAnimationFrame(() => { contentEl.innerHTML = formatText(fullText); scrollBottom(); pendingFrame = null; }); }
+          } else if (evt.type === 'tool_use') { startStatus('tool', evt.name || ''); } 
+          else if (evt.type === 'tool_result') { startStatus('thinking'); } 
+          else if (evt.type === 'error') {
+            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; } stopStatus();
+            contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') + `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
           } else if (evt.type === 'done') {
-            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; }
-            stopStatus();
-            // Final render with extras like commission download button
-            if (fullText) {
-              const extraBtn = buildExtraButton(fullText);
-              contentEl.innerHTML = formatText(fullText) + extraBtn;
-            }
+            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; } stopStatus();
+            if (fullText) { const extraBtn = buildExtraButton(fullText); contentEl.innerHTML = formatText(fullText) + extraBtn; }
           }
         }
       }
     } catch (err) {
-      if (err.name === 'AbortError') {
-        stopped = true;
-        stopStatus();
-        if (fullText) {
-          contentEl.innerHTML = formatText(fullText) +
-            `<div style="margin-top:8px;font-size:12px;color:#999">[已停止]</div>`;
-        } else {
-          contentEl.innerHTML = `<span style="color:#999;font-size:13px">[已停止]</span>`;
-        }
-      } else {
-        stopStatus();
-        contentEl.innerHTML = `<span class="error-text">Network error: ${escHtml(err.message || String(err))}</span>`;
-      }
+      if (err.name === 'AbortError') { stopped = true; stopStatus(); contentEl.innerHTML = fullText ? formatText(fullText) + `<div style="margin-top:8px;font-size:12px;color:#999">[已停止]</div>` : `<span style="color:#999;font-size:13px">[已停止]</span>`; } 
+      else { stopStatus(); contentEl.innerHTML = `<span class="error-text">Network error: ${escHtml(err.message || String(err))}</span>`; }
     } finally {
       stopStatus();
       if (fullText) {
-        history.push({
-          role: 'user',
-          content: msg,
-          fileName: fileForMsg?.name || null,
-          imagePreview: fileForMsg?.previewUrl || null,
-          fileId: fileForMsg?.fileId || null,
-          fileContent: fileForMsg?.content || null
-        });
-        history.push({ role: 'assistant', content: fullText + (stopped ? '\n\n[stopped by user]' : '') });
-        saveSession();
+        history.push({ role: 'user', content: msg, fileName: fileForMsg?.name || null, imagePreview: fileForMsg?.previewUrl || null, fileId: fileForMsg?.fileId || null, fileContent: fileForMsg?.content || null });
+        history.push({ role: 'assistant', content: fullText + (stopped ? '\n\n[stopped by user]' : '') }); saveSession();
       }
-      currentAbortController = null;
-      busy = false;
-      setSendButtonMode('send');
-      input.focus();
-      scrollBottom();
+      currentAbortController = null; busy = false; setSendButtonMode('send'); input.focus(); scrollBottom();
     }
   }
 
-  function stopGeneration() {
-    if (currentAbortController) {
-      currentAbortController.abort();
-    }
-  }
+  function stopGeneration() { if (currentAbortController) currentAbortController.abort(); }
 
   function setSendButtonMode(mode) {
-    // mode: 'send' or 'stop'
     if (mode === 'stop') {
-      sendBtn.disabled = false;
-      sendBtn.classList.add('stop-mode');
+      sendBtn.disabled = false; sendBtn.classList.add('stop-mode');
       sendBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>`;
-      sendBtn.onclick = stopGeneration;
-      sendBtn.title = 'Stop generation';
+      sendBtn.onclick = stopGeneration; sendBtn.title = 'Stop generation';
     } else {
       sendBtn.classList.remove('stop-mode');
       sendBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
-      sendBtn.onclick = sendMessage;
-      sendBtn.title = 'Send';
-      sendBtn.disabled = !input.value.trim();
+      sendBtn.onclick = sendMessage; sendBtn.title = 'Send'; sendBtn.disabled = !input.value.trim();
     }
   }
 
   function buildExtraButton(text) {
     const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
     if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
-      const y = ymMatch[1], m = ymMatch[2].padStart(2,'0');
-      const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|\s)\s*\d{4}\s*年/);
-      let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
-      let label = `Download Excel · ${y}年${m}月 Full Report`;
+      const y = ymMatch[1], m = ymMatch[2].padStart(2,'0'); const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|\s)\s*\d{4}\s*年/);
+      let url = `${BACKEND}/export/commission?year=${y}&month=${m}`; let label = `Download Excel · ${y}年${m}月 Full Report`;
       const excludeNames = ['PART','Commission','Monthly','Report'];
-      if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售')) {
-        const sp = encodeURIComponent(spMatch[1].trim());
-        url += `&salesperson=${sp}`;
-        label = `Download Excel · ${spMatch[1].trim()} ${y}年${m}月`;
-      }
-      return `<a href="${url}" target="_blank" download
-        style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        ${label}</a>`;
-    }
-    return '';
+      if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售')) { const sp = encodeURIComponent(spMatch[1].trim()); url += `&salesperson=${sp}`; label = `Download Excel · ${spMatch[1].trim()} ${y}年${m}月`; }
+      return `<a href="${url}" target="_blank" download style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>${label}</a>`;
+    } return '';
   }
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
-
   async function doLogin() {
-    const username = document.getElementById('loginUser').value.trim();
-    const password = document.getElementById('loginPass').value;
-    const btn = document.getElementById('loginBtn');
-    const errEl = document.getElementById('loginError');
+    const username = document.getElementById('loginUser').value.trim(); const password = document.getElementById('loginPass').value;
+    const btn = document.getElementById('loginBtn'); const errEl = document.getElementById('loginError');
     if (!username || !password) { showLoginError('Please enter your username and password.'); return; }
     btn.disabled = true; btn.textContent = 'Signing in…'; errEl.style.display = 'none';
     try {
-      const res = await fetch(BACKEND + '/auth/login', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username, password,
-          client_type: IS_MOBILE ? 'mobile' : 'web'
-        })
-      });
+      const res = await fetch(BACKEND + '/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, client_type: IS_MOBILE ? 'mobile' : 'web' }) });
       const data = await res.json();
       if (data.success) {
-        currentUser = { uid: data.uid, name: data.name, username: data.username,
-          role: data.role || 'guest', role_label: data.role_label || '', permissions: data.permissions || {},
-          session_token: data.session_token || '' };
-        userStore.setItem('chumart_user', JSON.stringify(currentUser));
-        showApp();
-      } else {
-        showLoginError(data.error || 'Invalid username or password.');
-      }
-    } catch (e) {
-      showLoginError('Connection error. Please try again.');
-    } finally {
-      btn.disabled = false; btn.textContent = 'Sign In';
-    }
+        currentUser = { uid: data.uid, name: data.name, username: data.username, role: data.role || 'guest', role_label: data.role_label || '', permissions: data.permissions || {}, session_token: data.session_token || '' };
+        userStore.setItem('chumart_user', JSON.stringify(currentUser)); showApp();
+      } else { showLoginError(data.error || 'Invalid username or password.'); }
+    } catch (e) { showLoginError('Connection error. Please try again.'); } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
   }
 
-  function showLoginError(msg) {
-    const el = document.getElementById('loginError');
-    el.textContent = msg; el.style.display = 'block';
-  }
+  function showLoginError(msg) { const el = document.getElementById('loginError'); el.textContent = msg; el.style.display = 'block'; }
 
   async function showApp() {
     document.getElementById('loginScreen').style.display = 'none';
@@ -1559,125 +1065,43 @@
     document.getElementById('userAvatar').textContent = initials;
     document.getElementById('userName').textContent = currentUser.name || currentUser.username;
     document.getElementById('roleBadge').textContent = currentUser.role_label || currentUser.role || '';
-    // Update greeting with user's first name
     const firstName = (currentUser.name || currentUser.username || 'Chumart').split(' ')[0];
     document.getElementById('greetingTitle').textContent = `Hello, ${firstName} 👋`;
     document.getElementById('modelSelectorWrap').style.display = 'block';
-    const isHighRole = ['admin', 'finance', 'sales_manager'].includes(currentUser.role);
     if (currentUser.role !== 'admin') {
       const defaultSonnet = currentUser.role === 'finance' || currentUser.role === 'sales_manager';
-      document.getElementById('modelSelect').innerHTML = `
-        <optgroup label="── Claude ──">
-          <option value="claude-sonnet-4-5"${defaultSonnet ? ' selected' : ''}>Claude Sonnet 4.5${defaultSonnet ? ' (default)' : ''}</option>
-          <option value="claude-haiku-4-5-20251001"${!defaultSonnet ? ' selected' : ''}>Claude Haiku 4.5 · Fast${!defaultSonnet ? ' (default)' : ''}</option>
-        </optgroup>`;
-      // Pre-select selected model so UI matches dropdown
+      document.getElementById('modelSelect').innerHTML = `<optgroup label="── Claude ──"><option value="claude-sonnet-4-5"${defaultSonnet ? ' selected' : ''}>Claude Sonnet 4.5${defaultSonnet ? ' (default)' : ''}</option><option value="claude-haiku-4-5-20251001"${!defaultSonnet ? ' selected' : ''}>Claude Haiku 4.5 · Fast${!defaultSonnet ? ' (default)' : ''}</option></optgroup>`;
       if (defaultSonnet) selectedModel = 'claude-sonnet-4-5';
     }
-    if (currentUser.role === 'admin') {
-      document.getElementById('modeSelectorWrap').classList.add('visible');
-    }
-    // Load sessions from DB
+    if (currentUser.role === 'admin') document.getElementById('modeSelectorWrap').classList.add('visible');
     await loadSessionsFromDB();
   }
 
   async function loadSessionsFromDB() {
     if (!currentUser?.uid) { if (allSessions.length) loadSession(allSessions[0].id); else newChat(); return; }
     try {
-      const res = await fetch(`${BACKEND}/sessions/${currentUser.uid}`);
-      const data = await res.json();
-      if (data.sessions && data.sessions.length > 0) {
-        allSessions = data.sessions.map(s => ({ id: s.id, title: s.title, history: s.history, updated_at: s.updated_at }));
-        renderSidebar();
-      }
-      newChat(); // Always start with a fresh chat
+      const res = await fetch(`${BACKEND}/sessions/${currentUser.uid}`); const data = await res.json();
+      if (data.sessions && data.sessions.length > 0) { allSessions = data.sessions.map(s => ({ id: s.id, title: s.title, history: s.history, updated_at: s.updated_at })); renderSidebar(); }
+      newChat();
     } catch(e) {
-      const saved = localStorage.getItem('chumartChats');
-      if (saved) try { allSessions = JSON.parse(saved); } catch(ex) {}
-      newChat(); // Always start fresh
+      const saved = localStorage.getItem('chumartChats'); if (saved) try { allSessions = JSON.parse(saved); } catch(ex) {} newChat();
     }
   }
 
   function doLogout() {
-    // 清两个存储位置都清掉(防止迁移残留)
-    sessionStorage.removeItem('chumart_user');
-    localStorage.removeItem('chumart_user');
-    currentUser = null;
-    selectedModel = 'claude-haiku-4-5-20251001';
-    document.getElementById('modelSelectorWrap').style.display = 'none';
-    document.getElementById('modeSelectorWrap').classList.remove('visible');
-    document.getElementById('freeModeToggle').checked = false;
-    freeMode = false;
-    document.getElementById('modelSelect').innerHTML = `
-      <optgroup label="── Claude ──">
-        <option value="claude-haiku-4-5-20251001" selected>Claude Haiku 4.5 · Fast (default)</option>
-        <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
-        <option value="claude-opus-4-5">Claude Opus 4.5</option>
-      </optgroup>
-      <optgroup label="── OpenAI GPT-5 (Latest) ──">
-        <option value="gpt-5.4">GPT-5.4 · Flagship</option>
-        <option value="gpt-5.4-mini">GPT-5.4 Mini · Fast</option>
-        <option value="gpt-5.4-nano">GPT-5.4 Nano · Fastest</option>
-      </optgroup>
-      <optgroup label="── OpenAI GPT-4 ──">
-        <option value="gpt-4o">GPT-4o</option>
-        <option value="gpt-4o-mini">GPT-4o Mini</option>
-      </optgroup>`;
-    selectedModel = 'claude-haiku-4-5-20251001';
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('loginUser').value = '';
-    document.getElementById('loginPass').value = '';
-    history = []; msgList.innerHTML = ''; emptyEl.style.display = 'flex';
+    sessionStorage.removeItem('chumart_user'); localStorage.removeItem('chumart_user'); currentUser = null; selectedModel = 'claude-haiku-4-5-20251001';
+    document.getElementById('modelSelectorWrap').style.display = 'none'; document.getElementById('modeSelectorWrap').classList.remove('visible'); document.getElementById('freeModeToggle').checked = false; freeMode = false;
+    document.getElementById('modelSelect').innerHTML = `<optgroup label="── Claude ──"><option value="claude-haiku-4-5-20251001" selected>Claude Haiku 4.5 · Fast (default)</option><option value="claude-sonnet-4-5">Claude Sonnet 4.5</option><option value="claude-opus-4-5">Claude Opus 4.5</option></optgroup><optgroup label="── OpenAI GPT-5 (Latest) ──"><option value="gpt-5.4">GPT-5.4 · Flagship</option><option value="gpt-5.4-mini">GPT-5.4 Mini · Fast</option><option value="gpt-5.4-nano">GPT-5.4 Nano · Fastest</option></optgroup><optgroup label="── OpenAI GPT-4 ──"><option value="gpt-4o">GPT-4o</option><option value="gpt-4o-mini">GPT-4o Mini</option></optgroup>`;
+    document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('loginUser').value = ''; document.getElementById('loginPass').value = '';
+    history = []; msgList.innerHTML = ''; emptyEl.style.display = 'flex'; closeSidebar();
   }
 
-  // Image overlay viewer — must be on window for inline onclick to work
   window.showImageOverlay = function(src) {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer';
     overlay.innerHTML = `<img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 4px 40px rgba(0,0,0,0.5)">`;
-    overlay.onclick = () => overlay.remove();
-    document.body.appendChild(overlay);
+    overlay.onclick = () => overlay.remove(); document.body.appendChild(overlay);
   }
-
-  // ── iOS PWA 键盘防挡逻辑 ──
-  const vv = window.visualViewport;
-  
-  function updateAppHeight() {
-    if (!vv) return;
-    document.documentElement.style.setProperty('--app-height', `${vv.height}px`);
-    
-    // 键盘弹起: 可视高度大幅缩小 → 去掉底部安全区避让
-    if (vv.height < window.screen.height - 150) {
-      document.documentElement.style.setProperty('--safe-bottom', '0px');
-    } else {
-      document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom)');
-    }
-    
-    window.scrollTo(0, 0);
-  }
-
-  if (vv) {
-    vv.addEventListener('resize', updateAppHeight);
-    vv.addEventListener('scroll', updateAppHeight);
-    updateAppHeight();
-  }
-
-  // ── 焦点处理: 等键盘动画完成后再滚到底 ──
-  document.addEventListener('focusin', (e) => {
-    if (e.target && e.target.id === 'inputBox') {
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-        const c = document.getElementById('messagesContainer');
-        if (c) c.scrollTop = c.scrollHeight;
-      }, 300);
-    }
-  });
-
-  document.addEventListener('focusout', (e) => {
-    if (e.target && e.target.id === 'inputBox') {
-      window.scrollTo(0, 0);
-    }
-  });
 </script>
 </body>
 </html>
