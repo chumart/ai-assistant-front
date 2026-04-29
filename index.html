@@ -1004,23 +1004,25 @@
   }
 
   // ── Check Reminder Sheet ──
+  let crData = []; // cache
+
   async function openCheckSheet() {
-    document.getElementById('crBackdrop').classList.add('visible');
-    document.getElementById('checkSheet').classList.add('open');
-    document.getElementById('crList').innerHTML = '<div class="cr-empty">Loading...</div>';
-    
+    // Fetch data FIRST, then open sheet (no Loading flash)
     try {
       const res = await fetch(`${BACKEND}/api/my-reminders?session_token=${encodeURIComponent(currentUser?.session_token || '')}`);
       const data = await res.json();
-      if (data.error) { document.getElementById('crList').innerHTML = `<div class="cr-empty" style="color:#dc2626">${escHtml(data.error)}</div>`; return; }
-      if (!data.reminders || !data.reminders.length) {
-        document.getElementById('crList').innerHTML = '<div class="cr-empty">No pending reminders</div>';
-        return;
-      }
-      renderCheckList(data.reminders);
-    } catch(e) {
-      document.getElementById('crList').innerHTML = `<div class="cr-empty" style="color:#dc2626">Error: ${escHtml(e.message)}</div>`;
+      if (data.error) { alert(data.error); return; }
+      crData = data.reminders || [];
+    } catch(e) { alert('Error: ' + e.message); return; }
+    
+    // Now open with content ready
+    if (!crData.length) {
+      document.getElementById('crList').innerHTML = '<div class="cr-empty">No pending reminders</div>';
+    } else {
+      renderCheckList(crData);
     }
+    document.getElementById('crBackdrop').classList.add('visible');
+    document.getElementById('checkSheet').classList.add('open');
   }
 
   function closeCheckSheet() {
@@ -1116,6 +1118,9 @@
       }).replace(' ', 'T') + ':00';
     }
 
+    const saveBtn = document.querySelector(`#crEdit_${id} .cr-edit-save`);
+    if (saveBtn) { saveBtn.textContent = 'Saving...'; saveBtn.disabled = true; }
+
     try {
       const res = await fetch(`${BACKEND}/api/my-reminders/${id}?session_token=${encodeURIComponent(currentUser?.session_token || '')}`, {
         method: 'PUT',
@@ -1124,9 +1129,32 @@
       });
       const data = await res.json();
       if (data.error) { alert('Error: ' + data.error); return; }
-      // Reload list
-      openCheckSheet();
+      
+      // Update display in-place (no reload flash)
+      const item = document.getElementById('cr_' + id);
+      if (item) {
+        const contentEl = item.querySelector('.cr-item-content');
+        const timeEl = item.querySelector('.cr-item-time');
+        const chEl = item.querySelector('.cr-item-channels');
+        if (contentEl) contentEl.textContent = content;
+        if (timeVal && timeEl) {
+          const displayTime = new Date(timeVal).toLocaleString();
+          timeEl.textContent = '⏰ ' + displayTime;
+        }
+        if (chEl) {
+          chEl.innerHTML = channels.map(ch =>
+            ch === 'email' ? '<span class="cr-item-ch cr-ch-email">📧 Email</span>'
+            : '<span class="cr-item-ch cr-ch-call">📞 Call</span>'
+          ).join('');
+        }
+      }
+      // Close edit form
+      const form = document.getElementById('crEdit_' + id);
+      if (form) form.classList.remove('active');
     } catch(e) { alert('Error: ' + e.message); }
+    finally {
+      if (saveBtn) { saveBtn.textContent = 'Save Changes'; saveBtn.disabled = false; }
+    }
   }
 
   async function deleteCr(id) {
