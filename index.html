@@ -520,7 +520,7 @@
           <button class="suggestion-card" onclick="quickSend('Check inventory for 54rs')">📦 Check 54rs inventory</button>
           <button class="suggestion-card desktop-only" onclick="quickSend('Find contact info for a specific customer')">👥 Find customer</button>
           <button class="suggestion-card" onclick="quickSend('How do I maintain this equipment daily?')">🔧 Product training</button>
-          <button class="suggestion-card mobile-only" onclick="quickSend('查看我的reminder')">📋 Check reminder</button>
+          <button class="suggestion-card mobile-only" onclick="checkReminder()">📋 Check reminder</button>
           <button class="suggestion-card mobile-only" onclick="startReminder()">⏰ Set Reminder</button>
         </div>
       </div>
@@ -763,7 +763,12 @@
   function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
   function quickSend(t) { input.value = t; sendMessage(); }
   function startReminder() {
-    quickSend('帮我设置一个提醒，请问我时间、内容和提醒方式');
+    const cn = /^zh/i.test(navigator.language);
+    quickSend(cn ? '帮我设置一个提醒' : 'Help me set a reminder');
+  }
+  function checkReminder() {
+    const cn = /^zh/i.test(navigator.language);
+    quickSend(cn ? '查看我的提醒' : 'Check my reminders');
   }
   function scrollBottom() { msgCont.scrollTop = msgCont.scrollHeight; }
   function hideEmpty() { emptyEl.style.display = 'none'; }
