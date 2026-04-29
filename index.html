@@ -458,6 +458,18 @@
   .rs-create-btn:hover { background: #333; }
   .rs-create-btn:disabled { background: #ccc; cursor: not-allowed; }
 
+  .rs-who-wrap { display: none; margin-bottom: 20px; } /* hidden until admin opens sheet */
+  .rs-who-wrap.visible { display: block; }
+  .rs-who-select {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 15px; color: var(--text-primary);
+    background: #fafafa; outline: none; font-family: inherit;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    box-sizing: border-box; max-width: 100%;
+  }
+
   /* ── Mobile breakpoint ── */
   @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
     .menu-btn { display: flex; }
@@ -669,6 +681,12 @@
       <span class="rs-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
       📞 Call
     </button>
+  </div>
+  <div class="rs-who-wrap" id="rsWhoWrap">
+    <div class="rs-label">Remind who? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#bbb">(Optional)</span></div>
+    <select class="rs-who-select" id="rsWho">
+      <option value="">Myself</option>
+    </select>
   </div>
   <button class="rs-create-btn" id="rsCreateBtn" onclick="createReminderFromSheet()">Create Reminder</button>
 </div>
@@ -910,7 +928,6 @@
 
   // ── Reminder Quick-Create Sheet ──
   function openReminderSheet() {
-    // Pre-fill time: 1 hour from now, rounded to nearest 5 min
     const now = new Date();
     now.setHours(now.getHours() + 1);
     now.setMinutes(Math.ceil(now.getMinutes() / 5) * 5, 0, 0);
@@ -918,11 +935,36 @@
     const localISO = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
     document.getElementById('rsTime').value = localISO;
     document.getElementById('rsContent').value = '';
-    // Reset method buttons to both active
     document.getElementById('rsEmail').classList.add('active');
     document.getElementById('rsCall').classList.add('active');
     document.getElementById('rsCreateBtn').disabled = false;
-    // Open sheet
+    
+    // Admin only: show "Remind who?" and fetch Odoo users
+    const whoWrap = document.getElementById('rsWhoWrap');
+    const whoSelect = document.getElementById('rsWho');
+    if (currentUser && currentUser.role === 'admin') {
+      whoWrap.classList.add('visible');
+      whoSelect.innerHTML = '<option value="">Myself</option><option disabled>Loading…</option>';
+      fetch(`${BACKEND}/api/reminder-users?session_token=${encodeURIComponent(currentUser.session_token || '')}`)
+        .then(r => r.json())
+        .then(data => {
+          whoSelect.innerHTML = '<option value="">Myself</option>';
+          if (data.users) {
+            data.users.forEach(u => {
+              if (u.uid !== currentUser.uid) {
+                const opt = document.createElement('option');
+                opt.value = u.name;
+                opt.textContent = u.name;
+                whoSelect.appendChild(opt);
+              }
+            });
+          }
+        })
+        .catch(() => { whoSelect.innerHTML = '<option value="">Myself</option>'; });
+    } else {
+      whoWrap.classList.remove('visible');
+    }
+    
     document.getElementById('rsBackdrop').classList.add('visible');
     document.getElementById('reminderSheet').classList.add('open');
     setTimeout(() => document.getElementById('rsContent').focus(), 350);
@@ -953,6 +995,7 @@
     const hasEmail = document.getElementById('rsEmail').classList.contains('active');
     const hasCall = document.getElementById('rsCall').classList.contains('active');
     const cn = /^zh/i.test(navigator.language);
+    const targetName = (document.getElementById('rsWho')?.value || '').trim();
 
     // Convert picked local time → LA time string for backend
     const localDate = new Date(timeVal);
@@ -968,10 +1011,14 @@
     else if (hasEmail) method = cn ? '邮件' : 'email only';
     else method = cn ? '电话' : 'call only';
 
-    // Construct message with LA time (backend interprets naive datetime as LA)
-    const msg = cn
-      ? `提醒我 ${laTimeStr} ${content}，${method}`
-      : `Remind me at ${laTimeStr} to ${content}, ${method}`;
+    // Content LAST — nothing after it, so AI can't accidentally grab extra fields
+    let msg;
+    const targetPart = targetName ? (cn ? `对象：${targetName} | ` : `For: ${targetName} | `) : '';
+    if (cn) {
+      msg = `设置提醒 | ${targetPart}方式：${method} | 时间：${laTimeStr} | 内容：${content}`;
+    } else {
+      msg = `Set reminder | ${targetPart}Method: ${method} | Time: ${laTimeStr} | Content: ${content}`;
+    }
 
     closeReminderSheet();
     quickSend(msg);
