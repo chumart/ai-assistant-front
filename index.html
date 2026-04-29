@@ -361,6 +361,92 @@
   .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 90; opacity: 0; transition: opacity 0.2s; }
   .sidebar-backdrop.visible { display: block; opacity: 1; }
 
+  /* ── Reminder Quick-Create Sheet (mobile only) ── */
+  .reminder-trigger {
+    display: none; /* shown only on mobile */
+    align-items: center; gap: 5px;
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; color: var(--text-muted); font-family: inherit;
+    padding: 2px 0; margin-bottom: 4px;
+  }
+  .reminder-trigger:active { color: var(--text-primary); }
+
+  .reminder-sheet-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 200;
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .reminder-sheet-backdrop.visible { display: block; opacity: 1; }
+
+  .reminder-sheet {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; z-index: 210;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding: 0 20px calc(20px + env(safe-area-inset-bottom));
+    max-height: 85vh; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .reminder-sheet.open { transform: translateY(0); }
+
+  .reminder-sheet-handle {
+    width: 36px; height: 4px; background: #d0d0d0; border-radius: 4px;
+    margin: 10px auto 16px;
+  }
+  .reminder-sheet-title {
+    font-size: 17px; font-weight: 600; color: var(--text-primary);
+    margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .reminder-sheet-close {
+    width: 28px; height: 28px; border-radius: 50%; background: #f0f0f0;
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: #888; font-size: 16px;
+  }
+
+  .rs-label {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+  }
+  .rs-input {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 15px; color: var(--text-primary);
+    background: #fafafa; outline: none; font-family: inherit;
+    margin-bottom: 16px; transition: border-color 0.2s;
+  }
+  .rs-input:focus { border-color: #111; background: #fff; }
+
+  .rs-datetime {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 15px; color: var(--text-primary);
+    background: #fafafa; outline: none; font-family: inherit;
+    margin-bottom: 16px; -webkit-appearance: none;
+  }
+  .rs-datetime:focus { border-color: #111; background: #fff; }
+
+  .rs-method-row {
+    display: flex; gap: 10px; margin-bottom: 20px;
+  }
+  .rs-method-btn {
+    flex: 1; padding: 11px 0; border: 1.5px solid var(--border);
+    border-radius: 12px; background: #fff; cursor: pointer;
+    font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
+    font-family: inherit; transition: all 0.15s; text-align: center;
+  }
+  .rs-method-btn.active {
+    border-color: #111; background: #111; color: #fff;
+  }
+
+  .rs-create-btn {
+    width: 100%; padding: 14px; background: #111; color: #fff;
+    border: none; border-radius: 14px; font-size: 15px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.15s;
+    margin-top: 4px;
+  }
+  .rs-create-btn:hover { background: #333; }
+  .rs-create-btn:disabled { background: #ccc; cursor: not-allowed; }
+
   /* ── Mobile breakpoint ── */
   @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
     .menu-btn { display: flex; }
@@ -416,6 +502,7 @@
     .input-box-wrapper { border-radius: 24px; padding: 5px 5px 5px 14px; }
     .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
     .disclaimer { display: none; }
+    .reminder-trigger { display: flex; }
 
     .login-card { padding: 36px 26px; margin: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
     .login-title { font-size: 22px; }
@@ -530,6 +617,10 @@
 
   <div class="input-area">
     <div id="filePreviewBar" class="file-preview" style="display:none;"></div>
+    <button class="reminder-trigger" onclick="openReminderSheet()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Set Reminder
+    </button>
     <div class="input-box-wrapper">
       <input type="file" id="fileInput" accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg,.webp" style="display:none" onchange="handleFileSelect(event)">
       <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()" title="Attach file">
@@ -543,6 +634,26 @@
     </div>
     <div class="disclaimer">Chumart AI · Real-time Odoo data · Paste screenshots with Ctrl+V</div>
   </div>
+</div>
+
+<!-- Reminder Quick-Create Sheet -->
+<div class="reminder-sheet-backdrop" id="rsBackdrop" onclick="closeReminderSheet()"></div>
+<div class="reminder-sheet" id="reminderSheet">
+  <div class="reminder-sheet-handle"></div>
+  <div class="reminder-sheet-title">
+    <span>⏰ Set Reminder</span>
+    <button class="reminder-sheet-close" onclick="closeReminderSheet()">✕</button>
+  </div>
+  <div class="rs-label">Content</div>
+  <input class="rs-input" id="rsContent" placeholder="What to remind?" autocomplete="off">
+  <div class="rs-label">Time</div>
+  <input class="rs-datetime" id="rsTime" type="datetime-local">
+  <div class="rs-label">Method</div>
+  <div class="rs-method-row">
+    <button class="rs-method-btn active" id="rsEmail" onclick="toggleMethod('rsEmail')">📧 Email</button>
+    <button class="rs-method-btn active" id="rsCall" onclick="toggleMethod('rsCall')">📞 Call</button>
+  </div>
+  <button class="rs-create-btn" id="rsCreateBtn" onclick="createReminderFromSheet()">Create Reminder</button>
 </div>
 
 <div id="loginScreen">
@@ -763,12 +874,74 @@
   function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
   function quickSend(t) { input.value = t; sendMessage(); }
   function startReminder() {
-    const cn = /^zh/i.test(navigator.language);
-    quickSend(cn ? '帮我设置一个提醒' : 'Help me set a reminder');
+    openReminderSheet();
   }
   function checkReminder() {
     const cn = /^zh/i.test(navigator.language);
     quickSend(cn ? '查看我的提醒' : 'Check my reminders');
+  }
+
+  // ── Reminder Quick-Create Sheet ──
+  function openReminderSheet() {
+    // Pre-fill time: 1 hour from now, rounded to nearest 5 min
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    now.setMinutes(Math.ceil(now.getMinutes() / 5) * 5, 0, 0);
+    const pad = n => String(n).padStart(2, '0');
+    const localISO = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    document.getElementById('rsTime').value = localISO;
+    document.getElementById('rsContent').value = '';
+    // Reset method buttons to both active
+    document.getElementById('rsEmail').classList.add('active');
+    document.getElementById('rsCall').classList.add('active');
+    document.getElementById('rsCreateBtn').disabled = false;
+    // Open sheet
+    document.getElementById('rsBackdrop').classList.add('visible');
+    document.getElementById('reminderSheet').classList.add('open');
+    setTimeout(() => document.getElementById('rsContent').focus(), 350);
+  }
+
+  function closeReminderSheet() {
+    document.getElementById('rsBackdrop').classList.remove('visible');
+    document.getElementById('reminderSheet').classList.remove('open');
+  }
+
+  function toggleMethod(id) {
+    document.getElementById(id).classList.toggle('active');
+    // Must have at least one method
+    const hasEmail = document.getElementById('rsEmail').classList.contains('active');
+    const hasCall = document.getElementById('rsCall').classList.contains('active');
+    if (!hasEmail && !hasCall) document.getElementById(id).classList.add('active');
+  }
+
+  function createReminderFromSheet() {
+    const content = document.getElementById('rsContent').value.trim();
+    const timeVal = document.getElementById('rsTime').value;
+    if (!content) { document.getElementById('rsContent').focus(); return; }
+    if (!timeVal) { document.getElementById('rsTime').focus(); return; }
+
+    const hasEmail = document.getElementById('rsEmail').classList.contains('active');
+    const hasCall = document.getElementById('rsCall').classList.contains('active');
+    const cn = /^zh/i.test(navigator.language);
+
+    // Format time for display
+    const dt = new Date(timeVal);
+    const pad = n => String(n).padStart(2, '0');
+    const timeStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+    // Build method string
+    let method;
+    if (hasEmail && hasCall) method = cn ? '邮件加电话' : 'email and call';
+    else if (hasEmail) method = cn ? '邮件' : 'email only';
+    else method = cn ? '电话' : 'call only';
+
+    // Construct message — has all info so AI will force_tool create directly
+    const msg = cn
+      ? `提醒我 ${timeStr} ${content}，${method}`
+      : `Remind me at ${timeStr} to ${content}, ${method}`;
+
+    closeReminderSheet();
+    quickSend(msg);
   }
   function scrollBottom() { msgCont.scrollTop = msgCont.scrollHeight; }
   function hideEmpty() { emptyEl.style.display = 'none'; }
