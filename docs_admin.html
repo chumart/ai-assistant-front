@@ -1116,9 +1116,10 @@
       else if (r.fired) status = '<span class="r-status-fired">✅ Fired</span>';
       else status = '<span class="r-status-pending">⏳ Pending</span>';
 
+      const chs = r.channels || [];
       const contact = [
-        r.target_email ? `📧 ${esc(r.target_email)}` : '',
-        r.target_phone ? `📞 ${esc(r.target_phone)}` : ''
+        chs.includes('email') && r.target_email ? `📧 ${esc(r.target_email)}` : '',
+        chs.includes('call') && r.target_phone ? `📞 ${esc(r.target_phone)}` : ''
       ].filter(Boolean).join('<br>');
 
       const fireTime = r.fire_at_la || '—';
