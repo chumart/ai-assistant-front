@@ -381,6 +381,7 @@
     }
     .user-name, .role-badge, .logout-btn, .online-dot { display: none !important; }
     .header-right { gap: 0; }
+    .desktop-only { display: none !important; }
     
     .chat-container { padding: 16px 14px 16px; }
     .chat-content { max-width: 100%; }
@@ -427,6 +428,7 @@
     .menu-btn, .sidebar-backdrop { display: none !important; }
     .sidebar-footer { display: none; }
     .header-center { display: none; }
+    .mobile-only { display: none !important; }
   }
 </style>
 </head>
@@ -514,10 +516,12 @@
         <div class="greeting-title" id="greetingTitle">Hello, Chumart 👋</div>
         <div class="greeting-sub">How can I help you today?</div>
         <div class="suggestions-grid">
-          <button class="suggestion-card" onclick="quickSend('Show me recent sales orders')">📊 Recent sales orders</button>
+          <button class="suggestion-card desktop-only" onclick="quickSend('Show me recent sales orders')">📊 Recent sales orders</button>
           <button class="suggestion-card" onclick="quickSend('Check inventory for 54rs')">📦 Check 54rs inventory</button>
-          <button class="suggestion-card" onclick="quickSend('Find contact info for a specific customer')">👥 Find customer</button>
+          <button class="suggestion-card desktop-only" onclick="quickSend('Find contact info for a specific customer')">👥 Find customer</button>
           <button class="suggestion-card" onclick="quickSend('How do I maintain this equipment daily?')">🔧 Product training</button>
+          <button class="suggestion-card mobile-only" onclick="quickSend('查看我的reminder')">📋 Check reminder</button>
+          <button class="suggestion-card mobile-only" onclick="startReminder()">⏰ Set Reminder</button>
         </div>
       </div>
       <div id="messageList"></div>
@@ -758,6 +762,9 @@
   input.addEventListener('input', () => { if (busy) return; sendBtn.disabled = !input.value.trim() || isUploading; });
   function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
   function quickSend(t) { input.value = t; sendMessage(); }
+  function startReminder() {
+    quickSend('帮我设置一个提醒，请问我时间、内容和提醒方式');
+  }
   function scrollBottom() { msgCont.scrollTop = msgCont.scrollHeight; }
   function hideEmpty() { emptyEl.style.display = 'none'; }
 
