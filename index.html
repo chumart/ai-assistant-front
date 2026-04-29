@@ -1240,7 +1240,7 @@
     if (!hasEmail && !hasCall) document.getElementById(id).classList.add('active');
   }
 
-  function createReminderFromSheet() {
+  async function createReminderFromSheet() {
     const content = document.getElementById('rsContent').value.trim();
     const timeVal = document.getElementById('rsTime').value;
     if (!content) { document.getElementById('rsContent').focus(); return; }
@@ -1248,34 +1248,46 @@
 
     const hasEmail = document.getElementById('rsEmail').classList.contains('active');
     const hasCall = document.getElementById('rsCall').classList.contains('active');
-    const cn = /^zh/i.test(navigator.language);
     const targetName = (document.getElementById('rsWho')?.value || '').trim();
+    const channels = [];
+    if (hasEmail) channels.push('email');
+    if (hasCall) channels.push('call');
+    if (!channels.length) channels.push('email', 'call');
 
-    // Convert picked local time → LA time string for backend
+    // Convert local time → LA time for backend
     const localDate = new Date(timeVal);
     const laTimeStr = localDate.toLocaleString('sv-SE', {
       timeZone: 'America/Los_Angeles',
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', hour12: false
-    });
+    }).replace(' ', 'T') + ':00';
 
-    // Build method string
-    let method;
-    if (hasEmail && hasCall) method = cn ? '邮件加电话' : 'email and call';
-    else if (hasEmail) method = cn ? '邮件' : 'email only';
-    else method = cn ? '电话' : 'call only';
+    const btn = document.getElementById('rsCreateBtn');
+    btn.textContent = 'Creating...'; btn.disabled = true;
 
-    // Content LAST — nothing after it, so AI can't accidentally grab extra fields
-    let msg;
-    const targetPart = targetName ? (cn ? `对象：${targetName} | ` : `For: ${targetName} | `) : '';
-    if (cn) {
-      msg = `设置提醒 | ${targetPart}方式：${method} | 时间：${laTimeStr} | 内容：${content}`;
-    } else {
-      msg = `Set reminder | ${targetPart}Method: ${method} | Time: ${laTimeStr} | Content: ${content}`;
-    }
+    try {
+      const res = await fetch(`${BACKEND}/api/my-reminders?session_token=${encodeURIComponent(currentUser?.session_token || '')}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, fire_at: laTimeStr, channels, target_name: targetName })
+      });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error); return; }
 
-    closeReminderSheet();
-    quickSend(msg);
+      // Success — close sheet, show confirmation as bot message
+      closeReminderSheet();
+      hideEmpty();
+      const cn = /^zh/i.test(navigator.language);
+      const who = data.target_user || (cn ? '你' : 'you');
+      let msg = cn ? `✅ 已设置成功！\n\n提醒信息已发送给 ${who}：` : `✅ Reminder set!\n\nFor ${who}:`;
+      if (data.target_email) msg += `\n• 📧 ${cn?'邮件':'Email'}：${data.target_email}`;
+      if (data.target_phone) msg += `\n• 📞 ${cn?'电话':'Phone'}：${data.target_phone}`;
+      msg += `\n• ⏰ ${cn?'时间':'Time'}：${data.fire_at_la}`;
+      msg += `\n• 📝 ${cn?'内容':'Content'}：${data.content}`;
+      renderBotMsgDOM(msg, false);
+      scrollBottom();
+    } catch(e) { alert('Network error: ' + e.message); }
+    finally { btn.textContent = 'Create Reminder'; btn.disabled = false; }
   }
   function scrollBottom() { msgCont.scrollTop = msgCont.scrollHeight; }
   function hideEmpty() { emptyEl.style.display = 'none'; }
