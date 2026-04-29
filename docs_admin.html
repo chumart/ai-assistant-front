@@ -563,6 +563,7 @@
       if (ok) {
         sessionStorage.setItem('lib_admin_key', adminKey);
         document.getElementById('loginOverlay').style.display = 'none';
+        loadReminders();
       } else {
         document.getElementById('loginErr').style.display = 'block';
         adminKey = '';
@@ -578,6 +579,7 @@
     loadDocs().then(ok => {
       if (ok) {
         document.getElementById('loginOverlay').style.display = 'none';
+        loadReminders();
       } else {
         adminKey = '';
         sessionStorage.removeItem('lib_admin_key');
@@ -1063,7 +1065,6 @@
       ].filter(Boolean).join('<br>');
 
       const fireTime = r.fire_at_la || '—';
-      const created = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
 
       return `<tr>
         <td class="r-id">${r.id}</td>
@@ -1104,14 +1105,6 @@
       showModal('Delete failed', esc(e.message), '⚠️');
     }
   }
-
-  // Load reminders after docs load
-  const _origLoadDocs = loadDocs;
-  loadDocs = async function() {
-    const ok = await _origLoadDocs();
-    if (ok) loadReminders();
-    return ok;
-  };
 </script>
 </body>
 </html>
