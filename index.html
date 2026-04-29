@@ -35,19 +35,16 @@
     --border: #e8e8e8;
     --radius-full: 9999px;
     --radius-lg: 16px;
-    /* iOS PWA 键盘防挡 */
+    /* iOS PWA 动态变量（仅 mobile JS 会更新） */
     --app-height: 100dvh;
     --safe-bottom: env(safe-area-inset-bottom);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* 1. 全局布局: 用 --app-height, iOS 键盘弹起时 JS 会动态更新 */
+  /* 桌面端：保持原版 */
   html, body {
-    height: var(--app-height);
-    position: fixed;
-    inset: 0;
-    width: 100%;
+    height: 100dvh;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -115,14 +112,8 @@
   .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; min-width: 0; }
 
   .header {
-    position: relative;
     height: 60px; display: flex; align-items: center; padding: 0 24px;
     justify-content: space-between; border-bottom: 1px solid var(--border);
-  }
-  .header-center {
-    position: absolute; left: 50%; transform: translateX(-50%);
-    font-size: 16px; font-weight: 600; color: var(--text-primary);
-    pointer-events: none;
   }
   .header-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 
@@ -430,6 +421,9 @@
      (phones/tablets in landscape). This is what makes iPhone landscape — which
      is ~844px wide — still get the hamburger menu and drawer. */
   @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
+    /* iOS PWA: 用 JS 动态计算的高度，键盘弹起时自动缩小 */
+    html, body { height: var(--app-height); position: fixed; inset: 0; width: 100%; }
+
     .menu-btn { display: flex; }
 
     /* Sidebar becomes a slide-in drawer (Today/Yesterday groups stay visible inside) */
@@ -553,30 +547,25 @@
     </div>
   </div>
 
-  <div id="historyList" class="history-list" style="margin-top:12px; flex:1;"></div>
-  
-  <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border);">
-    <button onclick="doLogout()" style="width:100%; display:flex; align-items:center; gap:10px; background:none; border:none; padding:12px 10px; font-size:13.5px; font-weight:500; color:#e53e3e; cursor:pointer; font-family:inherit; border-radius:8px; transition:background 0.15s;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Sign out
-    </button>
-  </div>
+  <div id="historyList" class="history-list" style="margin-top:12px"></div>
 </div>
 
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
 <div class="main-content">
   <div class="header">
-    <div style="display:flex;align-items:center;z-index:10;">
+    <div style="display:flex;align-items:center;gap:4px;min-width:0">
       <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Open menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
+      <div class="header-title">Chumart AI</div>
     </div>
-    
-    <div class="header-center">Chumart AI</div>
-    
-    <div class="user-badge" id="userBadge" style="z-index:10; gap:0;">
+    <div class="user-badge" id="userBadge">
+      <span style="width:7px;height:7px;background:#22c55e;border-radius:50%;display:inline-block;flex-shrink:0"></span>
       <div class="user-avatar" id="userAvatar">?</div>
+      <span class="user-name" id="userName"></span>
+      <span class="role-badge" id="roleBadge"></span>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
     </div>
   </div>
 
@@ -1568,11 +1557,8 @@
     document.getElementById('loginScreen').style.display = 'none';
     const initials = (currentUser.name || currentUser.username || '?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     document.getElementById('userAvatar').textContent = initials;
-    // userName and roleBadge moved to sidebar; set if present
-    const unEl = document.getElementById('userName');
-    if (unEl) unEl.textContent = currentUser.name || currentUser.username;
-    const rbEl = document.getElementById('roleBadge');
-    if (rbEl) rbEl.textContent = currentUser.role_label || currentUser.role || '';
+    document.getElementById('userName').textContent = currentUser.name || currentUser.username;
+    document.getElementById('roleBadge').textContent = currentUser.role_label || currentUser.role || '';
     // Update greeting with user's first name
     const firstName = (currentUser.name || currentUser.username || 'Chumart').split(' ')[0];
     document.getElementById('greetingTitle').textContent = `Hello, ${firstName} 👋`;
