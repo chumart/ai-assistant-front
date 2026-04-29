@@ -383,13 +383,16 @@
     background: #fff; z-index: 210;
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
-    transform: translateY(100%);
+    transform: translateY(105%); /* 多推5%确保完全不可见 */
     transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
     padding: 0 20px calc(20px + env(safe-area-inset-bottom));
-    max-height: 85vh; overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    max-height: 85vh;
+    overflow: hidden; /* 防止内容撑宽 */
+    width: 100%;
+    box-sizing: border-box;
+    visibility: hidden; /* 关闭时完全不可见 */
   }
-  .reminder-sheet.open { transform: translateY(0); }
+  .reminder-sheet.open { transform: translateY(0); visibility: visible; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
   .reminder-sheet-handle {
     width: 36px; height: 4px; background: #d0d0d0; border-radius: 4px;
@@ -410,18 +413,19 @@
     text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
   }
   .rs-input {
-    width: 100%; padding: 12px 14px; border: 1px solid var(--border);
-    border-radius: 12px; font-size: 15px; color: var(--text-primary);
+    width: 100%; max-width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 16px; color: var(--text-primary);
     background: #fafafa; outline: none; font-family: inherit;
     margin-bottom: 16px; transition: border-color 0.2s;
+    box-sizing: border-box; -webkit-appearance: none;
   }
   .rs-input:focus { border-color: #111; background: #fff; }
 
   .rs-datetime {
-    width: 100%; padding: 12px 14px; border: 1px solid var(--border);
-    border-radius: 12px; font-size: 15px; color: var(--text-primary);
+    width: 100%; max-width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 16px; color: var(--text-primary);
     background: #fafafa; outline: none; font-family: inherit;
-    margin-bottom: 16px; -webkit-appearance: none;
+    margin-bottom: 16px; -webkit-appearance: none; box-sizing: border-box;
   }
   .rs-datetime:focus { border-color: #111; background: #fff; }
 
@@ -433,9 +437,16 @@
     border-radius: 12px; background: #fff; cursor: pointer;
     font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
     font-family: inherit; transition: all 0.15s; text-align: center;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
   }
-  .rs-method-btn.active {
-    border-color: #111; background: #111; color: #fff;
+  .rs-method-btn .rs-check {
+    width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #ccc;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .rs-method-btn.active { border-color: #111; }
+  .rs-method-btn.active .rs-check {
+    background: #111; border-color: #111;
   }
 
   .rs-create-btn {
@@ -648,10 +659,16 @@
   <input class="rs-input" id="rsContent" placeholder="What to remind?" autocomplete="off">
   <div class="rs-label">Time</div>
   <input class="rs-datetime" id="rsTime" type="datetime-local">
-  <div class="rs-label">Method</div>
+  <div class="rs-label">Method <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#bbb">(Optional)</span></div>
   <div class="rs-method-row">
-    <button class="rs-method-btn active" id="rsEmail" onclick="toggleMethod('rsEmail')">📧 Email</button>
-    <button class="rs-method-btn active" id="rsCall" onclick="toggleMethod('rsCall')">📞 Call</button>
+    <button class="rs-method-btn active" id="rsEmail" onclick="toggleMethod('rsEmail')">
+      <span class="rs-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+      📧 Email
+    </button>
+    <button class="rs-method-btn active" id="rsCall" onclick="toggleMethod('rsCall')">
+      <span class="rs-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+      📞 Call
+    </button>
   </div>
   <button class="rs-create-btn" id="rsCreateBtn" onclick="createReminderFromSheet()">Create Reminder</button>
 </div>
@@ -924,10 +941,13 @@
     const hasCall = document.getElementById('rsCall').classList.contains('active');
     const cn = /^zh/i.test(navigator.language);
 
-    // Format time for display
-    const dt = new Date(timeVal);
-    const pad = n => String(n).padStart(2, '0');
-    const timeStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    // Convert picked local time → LA time string for backend
+    const localDate = new Date(timeVal);
+    const laTimeStr = localDate.toLocaleString('sv-SE', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
 
     // Build method string
     let method;
@@ -935,10 +955,10 @@
     else if (hasEmail) method = cn ? '邮件' : 'email only';
     else method = cn ? '电话' : 'call only';
 
-    // Construct message — has all info so AI will force_tool create directly
+    // Construct message with LA time (backend interprets naive datetime as LA)
     const msg = cn
-      ? `提醒我 ${timeStr} ${content}，${method}`
-      : `Remind me at ${timeStr} to ${content}, ${method}`;
+      ? `提醒我 ${laTimeStr} ${content}，${method}`
+      : `Remind me at ${laTimeStr} to ${content}, ${method}`;
 
     closeReminderSheet();
     quickSend(msg);
@@ -1159,7 +1179,8 @@
       file_content: fileForMsg?.content || '', file_name: fileForMsg?.name || '', file_id: fileForMsg?.fileId || '',
       role: currentUser?.role || 'guest', user_name: currentUser?.name || '', user_id: currentUser?.uid || 0,
       model: selectedModel, free_mode: freeMode, session_id: currentSessionId || '',
-      session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20), session_token: currentUser?.session_token || ''
+      session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20), session_token: currentUser?.session_token || '',
+      user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || ''
     };
 
     try {
