@@ -497,9 +497,10 @@
   .cr-edit-form { margin-top: 10px; display: none; }
   .cr-edit-form.active { display: block; }
   .cr-edit-input {
-    width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0;
-    border-radius: 10px; font-size: 14px; font-family: inherit;
+    width: 100%; max-width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0;
+    border-radius: 10px; font-size: 16px; font-family: inherit;
     margin-bottom: 8px; box-sizing: border-box; outline: none;
+    -webkit-appearance: none; appearance: none;
   }
   .cr-edit-input:focus { border-color: #111; }
   .cr-edit-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -1030,8 +1031,13 @@
       }).join('');
       const hasEmail = (r.channels || []).includes('email');
       const hasCall = (r.channels || []).includes('call');
-      // Convert fire_at_iso to local time for the datetime-local input
-      const localISO = r.fire_at_iso ? new Date(r.fire_at_iso + 'Z').toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).replace(' ', 'T') : '';
+      // Convert fire_at_iso (UTC) to local time for datetime-local input
+      let localISO = '';
+      if (r.fire_at_iso) {
+        const utcDate = new Date(r.fire_at_iso + (r.fire_at_iso.endsWith('Z') ? '' : 'Z'));
+        const pad = n => String(n).padStart(2, '0');
+        localISO = `${utcDate.getFullYear()}-${pad(utcDate.getMonth()+1)}-${pad(utcDate.getDate())}T${pad(utcDate.getHours())}:${pad(utcDate.getMinutes())}`;
+      }
       
       return `<div class="cr-item" id="cr_${r.id}">
         <div class="cr-item-header">
