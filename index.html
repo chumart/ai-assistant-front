@@ -1273,6 +1273,22 @@
           else if (evt.type === 'error') {
             if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; } stopStatus();
             contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') + `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
+          } else if (evt.type === 'overloaded') {
+            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; } stopStatus();
+            const fb = evt.fallback || 'claude-haiku-4-5-20251001';
+            const fbLabel = fb.includes('haiku') ? 'Haiku (Fast)' : fb.includes('opus') ? 'Opus' : 'Sonnet';
+            contentEl.innerHTML = `<div style="text-align:center;padding:20px 0">
+              <div style="font-size:14px;color:#888;margin-bottom:12px">⚠️ Model is currently busy</div>
+              <button onclick="retryWithModel('${fb}')" style="padding:10px 20px;background:#111;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">
+                Retry with ${escHtml(fbLabel)}
+              </button>
+              <button onclick="retryWithModel('${escHtml(evt.model)}')" style="padding:10px 20px;background:#fff;color:#111;border:1px solid #ddd;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-left:8px">
+                Try again
+              </button>
+            </div>`;
+            // Store last message for retry
+            window._lastRetryMsg = msg;
+            window._lastRetryFile = fileForMsg;
           } else if (evt.type === 'done') {
             if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; } stopStatus();
             if (fullText) { const extraBtn = buildExtraButton(fullText); contentEl.innerHTML = formatText(fullText) + extraBtn; }
@@ -1293,6 +1309,26 @@
   }
 
   function stopGeneration() { if (currentAbortController) currentAbortController.abort(); }
+
+  window.retryWithModel = function(model) {
+    // Remove the overloaded bot bubble + the user bubble (sendMessage will re-add)
+    const lastBot = msgList.querySelector('.message-wrapper.bot:last-child');
+    if (lastBot) lastBot.remove();
+    const lastUser = msgList.querySelector('.message-wrapper.user:last-child');
+    if (lastUser) lastUser.remove();
+    if (history.length) history.pop();
+    // Reset state
+    busy = false;
+    setSendButtonMode('send');
+    // Switch model and resend
+    selectedModel = model;
+    document.getElementById('modelSelect').value = model;
+    const retryMsg = window._lastRetryMsg;
+    if (retryMsg) {
+      input.value = retryMsg;
+      sendMessage();
+    }
+  };
 
   function setSendButtonMode(mode) {
     if (mode === 'stop') {
