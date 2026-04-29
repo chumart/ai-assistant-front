@@ -423,7 +423,8 @@
 
   .rs-datetime {
     width: 100%; max-width: 100%; padding: 12px 14px; border: 1px solid var(--border);
-    border-radius: 12px; font-size: 16px; color: var(--text-primary);
+    border-radius: 12px; font-size: 16px; color: #111;
+    -webkit-text-fill-color: #111; opacity: 1;
     background: #fafafa; outline: none; font-family: inherit;
     margin-bottom: 16px; -webkit-appearance: none; box-sizing: border-box;
   }
@@ -501,6 +502,7 @@
     border-radius: 10px; font-size: 16px; font-family: inherit;
     margin-bottom: 8px; box-sizing: border-box; outline: none;
     -webkit-appearance: none; appearance: none;
+    color: #111; -webkit-text-fill-color: #111; opacity: 1;
   }
   .cr-edit-input:focus { border-color: #111; }
   .cr-edit-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -1055,7 +1057,7 @@
           <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">CONTENT</div>
           <input class="cr-edit-input" id="crContent_${r.id}" value="${escHtml(r.content)}" placeholder="Content">
           <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">TIME</div>
-          <input class="cr-edit-input" id="crTime_${r.id}" type="datetime-local" value="${localISO}" style="color:#111">
+          <input class="cr-edit-input" id="crTime_${r.id}" type="datetime-local" value="${localISO}">
           <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">METHOD</div>
           <div class="cr-edit-row">
             <button class="cr-edit-ch ${hasEmail ? 'active' : ''}" id="crEmail_${r.id}" onclick="this.classList.toggle('active')">
