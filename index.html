@@ -1066,10 +1066,10 @@
           <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">CONTENT</div>
           <input class="cr-edit-input" id="crContent_${r.id}" value="${escHtml(r.content)}" placeholder="Content">
           <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">TIME</div>
-          <div style="position:relative;margin-bottom:8px;cursor:pointer" onclick="document.getElementById('crTime_${r.id}').showPicker?.()">
-            <div id="crTimeLabel_${r.id}" style="padding:10px 12px;border:1px solid #e0e0e0;border-radius:10px;font-size:15px;color:#111;background:#fafafa;pointer-events:none">${escHtml(r.fire_at_la || 'Tap to set time')}</div>
-            <input id="crTime_${r.id}" type="datetime-local" value="${localISO}" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;font-size:16px;cursor:pointer" onchange="document.getElementById('crTimeLabel_${r.id}').textContent=new Date(this.value).toLocaleString()">
-          </div>
+          <label style="display:block;position:relative;margin-bottom:8px;cursor:pointer">
+            <div id="crTimeLabel_${r.id}" style="padding:10px 12px;border:1px solid #e0e0e0;border-radius:10px;font-size:15px;color:#111;background:#fafafa">${escHtml(r.fire_at_la || 'Tap to set time')}</div>
+            <input id="crTime_${r.id}" type="datetime-local" value="${localISO}" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.01;font-size:16px;-webkit-appearance:none;border:none;background:transparent" onchange="document.getElementById('crTimeLabel_${r.id}').textContent=new Date(this.value).toLocaleString()">
+          </label>
           <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">METHOD</div>
           <div class="cr-edit-row">
             <button class="cr-edit-ch ${hasEmail ? 'active' : ''}" id="crEmail_${r.id}" onclick="this.classList.toggle('active')">
