@@ -163,7 +163,10 @@
   .empty-state { display: flex; flex-direction: column; padding-top: 10vh; width: 100%; animation: fadeIn 0.4s ease; }
   .greeting-title { font-size: 36px; font-weight: 600; letter-spacing: -0.03em; color: var(--text-primary); margin-bottom: 8px; }
   .greeting-sub { font-size: 16px; color: var(--text-muted); margin-bottom: 36px; }
-  .suggestions-grid { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 400px; }
+  .suggestions-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px; width: 100%; max-width: 400px;
+  }
   .suggestion-card {
     background: var(--surface); padding: 14px 16px; border-radius: 12px;
     border: 1px solid var(--border); text-align: left; cursor: pointer;
@@ -464,27 +467,27 @@
     #messageList { gap: 22px; }
 
     /* Empty state */
-    .greeting-title { font-size: 28px; }
-    .greeting-sub { font-size: 14px; margin-bottom: 24px; }
+    .greeting-title { font-size: 28px; margin-bottom: 6px; }
+    .greeting-sub { font-size: 14px; color: #888; margin-bottom: 24px; }
     .empty-state { padding-top: 6vh; }
-    .suggestions-grid { flex-direction: column; gap: 8px; max-width: 100%; }
-    .suggestion-card { font-size: 12.5px; padding: 12px 14px; }
+    .suggestions-grid { flex-direction: column; align-items: flex-start; gap: 8px; max-width: 100%; }
+    .suggestion-card { width: fit-content; font-size: 12.5px; padding: 10px 16px; border-radius: 100px; }
 
     /* Message bubbles */
     .message-content { max-width: 88%; font-size: 15px; }
     .message-wrapper.user .message-content { padding: 10px 14px; }
 
-    /* 输入区域: 普通 Flex 子元素,自然贴底 */
+    /* 输入区域 */
     .input-area {
-      position: relative;        /* 不用 fixed/absolute */
-      flex-shrink: 0;            /* 不被聊天记录挤压 */
-      background: var(--bg);
-      border-top: 1px solid var(--border);
+      position: relative;
+      flex-shrink: 0;
+      background: linear-gradient(to top, var(--bg) 70%, transparent);
+      border-top: none;
       padding: 8px 12px calc(8px + var(--safe-bottom));
-      bottom: auto;              /* 清除可能遗留的 bottom 属性 */
+      bottom: auto;
       transition: none;
     }
-    .input-box-wrapper { padding: 5px 5px 5px 12px; }
+    .input-box-wrapper { border-radius: 24px; padding: 5px 5px 5px 16px; }
     .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
     /* 手机端隐藏底部 disclaimer 那行 */
     .disclaimer { display: none; }
