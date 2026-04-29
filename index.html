@@ -42,9 +42,12 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* 桌面端：保持原版 */
+  /* 全局: --app-height 默认 100dvh，桌面端不变；iOS PWA 键盘弹起时 JS 动态更新 */
   html, body {
-    height: 100dvh;
+    height: var(--app-height);
+    position: fixed;
+    inset: 0;
+    width: 100%;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -421,9 +424,6 @@
      (phones/tablets in landscape). This is what makes iPhone landscape — which
      is ~844px wide — still get the hamburger menu and drawer. */
   @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
-    /* iOS PWA: 用 JS 动态计算的高度，键盘弹起时自动缩小 */
-    html, body { height: var(--app-height); position: fixed; inset: 0; width: 100%; }
-
     .menu-btn { display: flex; }
 
     /* Sidebar becomes a slide-in drawer (Today/Yesterday groups stay visible inside) */
