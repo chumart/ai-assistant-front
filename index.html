@@ -1052,8 +1052,11 @@
           </div>
         </div>
         <div class="cr-edit-form" id="crEdit_${r.id}">
+          <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">CONTENT</div>
           <input class="cr-edit-input" id="crContent_${r.id}" value="${escHtml(r.content)}" placeholder="Content">
-          <input class="cr-edit-input" id="crTime_${r.id}" type="datetime-local" value="${localISO}">
+          <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">TIME</div>
+          <input class="cr-edit-input" id="crTime_${r.id}" type="datetime-local" value="${localISO}" style="color:#111">
+          <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">METHOD</div>
           <div class="cr-edit-row">
             <button class="cr-edit-ch ${hasEmail ? 'active' : ''}" id="crEmail_${r.id}" onclick="this.classList.toggle('active')">
               <span class="cr-chk">${chk}</span> 📧 Email
@@ -1071,7 +1074,14 @@
 
   function toggleCrEdit(id) {
     const form = document.getElementById('crEdit_' + id);
-    form.classList.toggle('active');
+    const isOpen = form.classList.toggle('active');
+    if (isOpen) {
+      // Scroll edit form into view after animation
+      setTimeout(() => {
+        const item = document.getElementById('cr_' + id);
+        if (item) item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
   }
 
   async function saveCr(id) {
