@@ -314,6 +314,58 @@
   }
   .search-result-text.expanded { max-height: none; }
   .expand-btn { font-size: 12px; color: #0b57d0; cursor: pointer; background: none; border: none; padding: 4px 0; font-family: inherit; margin-top: 4px; }
+
+  /* Reminders section */
+  .reminder-card {
+    background: #fff; border: 1px solid #eaeaea; border-radius: 14px;
+    overflow: hidden; margin-bottom: 28px;
+  }
+  .reminder-header {
+    padding: 18px 24px; border-bottom: 1px solid #eaeaea;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+  .reminder-header h3 { font-size: 15px; font-weight: 600; margin: 0; }
+  .reminder-controls { display: flex; gap: 10px; align-items: center; }
+  .reminder-toggle { font-size: 13px; display: flex; align-items: center; gap: 6px; color: #555; cursor: pointer; }
+  .reminder-toggle input { cursor: pointer; }
+  .reminder-filter {
+    padding: 7px 12px; border: 1px solid #e0e0e0; border-radius: 8px;
+    font-size: 13px; font-family: inherit; outline: none; background: #fafafa;
+  }
+  .reminder-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .reminder-table th {
+    text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em; color: #888;
+    background: #fafafa; border-bottom: 1px solid #eee; white-space: nowrap;
+  }
+  .reminder-table td {
+    padding: 12px 14px; border-bottom: 1px solid #f4f4f4;
+    vertical-align: top; line-height: 1.5;
+  }
+  .reminder-table tr:hover td { background: #fafafa; }
+  .r-id { font-weight: 600; color: #555; font-size: 12px; }
+  .r-user { font-weight: 500; }
+  .r-content { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .r-channel-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 11px; font-weight: 500; margin-right: 4px;
+  }
+  .r-ch-email { background: #dbeafe; color: #1d4ed8; }
+  .r-ch-call { background: #dcfce7; color: #166534; }
+  .r-status-pending { color: #ca8a04; font-weight: 500; }
+  .r-status-fired { color: #16a34a; font-weight: 500; }
+  .r-status-error { color: #dc2626; font-weight: 500; }
+  .r-contact { font-size: 12px; color: #666; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .r-delete-btn {
+    padding: 5px 12px; background: #fff; color: #dc2626; border: 1px solid #fecaca;
+    border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
+    transition: all 0.15s;
+  }
+  .r-delete-btn:hover { background: #fef2f2; border-color: #dc2626; }
+  .r-empty { text-align: center; padding: 40px 20px; color: #aaa; font-size: 14px; }
+  .r-stats { display: flex; gap: 14px; padding: 14px 24px; border-bottom: 1px solid #eee; }
+  .r-stat { font-size: 13px; color: #555; }
+  .r-stat strong { font-weight: 600; color: #111; }
 </style>
 </head>
 <body>
@@ -440,6 +492,25 @@
 
 <!-- Search Test Card -->
 <div class="container" style="padding-top:0">
+
+  <!-- Reminders Management -->
+  <div class="reminder-card" id="reminderSection">
+    <div class="reminder-header">
+      <h3>⏰ All Reminders</h3>
+      <div class="reminder-controls">
+        <select class="reminder-filter" id="reminderUserFilter" onchange="renderReminders()">
+          <option value="all">All Users</option>
+        </select>
+        <label class="reminder-toggle">
+          <input type="checkbox" id="reminderShowFired" onchange="loadReminders()">
+          Show fired
+        </label>
+      </div>
+    </div>
+    <div class="r-stats" id="reminderStats"></div>
+    <div id="reminderList"><div class="r-empty">Loading reminders…</div></div>
+  </div>
+
   <div class="search-card">
     <h3>Search Test</h3>
     <p>输入问题，看知识库能找到哪些相关 chunks。用于调试文档是否被正确索引。</p>
@@ -928,6 +999,119 @@
   }
 
   function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // ── Reminders Management ──────────────────────────────────────
+  let allReminders = [];
+
+  async function loadReminders() {
+    const fired = document.getElementById('reminderShowFired').checked;
+    try {
+      const res = await fetch(`${BACKEND}/admin/reminders?admin_key=${encodeURIComponent(adminKey)}&include_fired=${fired}`);
+      const data = await res.json();
+      if (data.error) { document.getElementById('reminderList').innerHTML = `<div class="r-empty" style="color:#dc2626">Error: ${esc(data.error)}</div>`; return; }
+      allReminders = data.reminders || [];
+      updateReminderFilter();
+      renderReminders();
+    } catch(e) {
+      document.getElementById('reminderList').innerHTML = `<div class="r-empty" style="color:#dc2626">Failed to load: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function updateReminderFilter() {
+    const sel = document.getElementById('reminderUserFilter');
+    const currentVal = sel.value;
+    const users = [...new Set(allReminders.map(r => r.user_name))].sort();
+    sel.innerHTML = '<option value="all">All Users</option>' +
+      users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+    sel.value = users.includes(currentVal) ? currentVal : 'all';
+  }
+
+  function renderReminders() {
+    const filter = document.getElementById('reminderUserFilter').value;
+    const filtered = filter === 'all' ? allReminders : allReminders.filter(r => r.user_name === filter);
+
+    // Stats
+    const pending = filtered.filter(r => !r.fired).length;
+    const fired = filtered.filter(r => r.fired).length;
+    const errored = filtered.filter(r => r.error).length;
+    document.getElementById('reminderStats').innerHTML =
+      `<span class="r-stat">Total: <strong>${filtered.length}</strong></span>` +
+      `<span class="r-stat">Pending: <strong style="color:#ca8a04">${pending}</strong></span>` +
+      `<span class="r-stat">Fired: <strong style="color:#16a34a">${fired}</strong></span>` +
+      (errored ? `<span class="r-stat">Errors: <strong style="color:#dc2626">${errored}</strong></span>` : '');
+
+    if (!filtered.length) {
+      document.getElementById('reminderList').innerHTML = '<div class="r-empty">No reminders found.</div>';
+      return;
+    }
+
+    const rows = filtered.map(r => {
+      const channels = (r.channels || []).map(ch => {
+        if (ch === 'email') return '<span class="r-channel-badge r-ch-email">📧 Email</span>';
+        if (ch === 'call') return '<span class="r-channel-badge r-ch-call">📞 Call</span>';
+        return `<span class="r-channel-badge">${esc(ch)}</span>`;
+      }).join('');
+
+      let status;
+      if (r.error) status = `<span class="r-status-error" title="${esc(r.error)}">❌ Error</span>`;
+      else if (r.fired) status = '<span class="r-status-fired">✅ Fired</span>';
+      else status = '<span class="r-status-pending">⏳ Pending</span>';
+
+      const contact = [
+        r.target_email ? `📧 ${esc(r.target_email)}` : '',
+        r.target_phone ? `📞 ${esc(r.target_phone)}` : ''
+      ].filter(Boolean).join('<br>');
+
+      const fireTime = r.fire_at_la || '—';
+      const created = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
+
+      return `<tr>
+        <td class="r-id">${r.id}</td>
+        <td class="r-user">${esc(r.user_name)}</td>
+        <td class="r-content" title="${esc(r.content)}">${esc(r.content)}</td>
+        <td style="white-space:nowrap">${esc(fireTime)}</td>
+        <td>${channels}</td>
+        <td class="r-contact">${contact || '—'}</td>
+        <td>${status}</td>
+        <td><button class="r-delete-btn" onclick="deleteReminder(${r.id}, '${esc(r.content).replace(/'/g, "\\'")}')">Delete</button></td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('reminderList').innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="reminder-table">
+          <thead><tr>
+            <th>ID</th><th>User</th><th>Content</th><th>Fire At (LA)</th>
+            <th>Channels</th><th>Send To</th><th>Status</th><th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function deleteReminder(id, content) {
+    const ok = await showModal(
+      'Delete reminder?',
+      `<strong>ID: ${id}</strong><br>${esc(content)}<br><br>This cannot be undone.`
+    );
+    if (!ok) return;
+    try {
+      const res = await fetch(`${BACKEND}/admin/reminders/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) { showModal('Delete failed', esc(data.error), '⚠️'); return; }
+      await loadReminders();
+    } catch(e) {
+      showModal('Delete failed', esc(e.message), '⚠️');
+    }
+  }
+
+  // Load reminders after docs load
+  const _origLoadDocs = loadDocs;
+  loadDocs = async function() {
+    const ok = await _origLoadDocs();
+    if (ok) loadReminders();
+    return ok;
+  };
 </script>
 </body>
 </html>
