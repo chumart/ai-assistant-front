@@ -458,6 +458,66 @@
   .rs-create-btn:hover { background: #333; }
   .rs-create-btn:disabled { background: #ccc; cursor: not-allowed; }
 
+  /* Check Reminder Sheet */
+  .cr-sheet { 
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; z-index: 210;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
+    transform: translateY(105%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding: 0 20px calc(20px + env(safe-area-inset-bottom));
+    max-height: 85vh; width: 100%; box-sizing: border-box;
+    visibility: hidden; overflow: hidden;
+  }
+  .cr-sheet.open { transform: translateY(0); visibility: visible; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+  .cr-item {
+    border: 1px solid #eee; border-radius: 12px; padding: 14px;
+    margin-bottom: 12px; transition: all 0.15s;
+  }
+  .cr-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .cr-item-content { font-size: 15px; font-weight: 500; color: #111; flex: 1; word-break: break-word; }
+  .cr-item-time { font-size: 13px; color: #888; margin-top: 4px; }
+  .cr-item-channels { display: flex; gap: 6px; margin-top: 6px; }
+  .cr-item-ch { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .cr-ch-email { background: #dbeafe; color: #1d4ed8; }
+  .cr-ch-call { background: #dcfce7; color: #166534; }
+  .cr-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .cr-btn-edit, .cr-btn-del {
+    padding: 6px 12px; border-radius: 8px; font-size: 12px;
+    font-weight: 500; cursor: pointer; border: 1px solid; font-family: inherit;
+  }
+  .cr-btn-edit { background: #fff; color: #111; border-color: #ddd; }
+  .cr-btn-edit:hover { background: #f5f5f5; }
+  .cr-btn-del { background: #fff; color: #dc2626; border-color: #fecaca; }
+  .cr-btn-del:hover { background: #fef2f2; }
+
+  /* Edit mode */
+  .cr-edit-form { margin-top: 10px; display: none; }
+  .cr-edit-form.active { display: block; }
+  .cr-edit-input {
+    width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0;
+    border-radius: 10px; font-size: 14px; font-family: inherit;
+    margin-bottom: 8px; box-sizing: border-box; outline: none;
+  }
+  .cr-edit-input:focus { border-color: #111; }
+  .cr-edit-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .cr-edit-ch {
+    flex: 1; padding: 8px; border: 1.5px solid #ddd; border-radius: 10px;
+    text-align: center; cursor: pointer; font-size: 13px; font-family: inherit;
+    background: #fff; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .cr-edit-ch.active { border-color: #111; }
+  .cr-edit-ch .cr-chk { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid #ccc; display: flex; align-items: center; justify-content: center; }
+  .cr-edit-ch.active .cr-chk { background: #111; border-color: #111; }
+  .cr-edit-save {
+    width: 100%; padding: 10px; background: #111; color: #fff;
+    border: none; border-radius: 10px; font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+  }
+  .cr-empty { text-align: center; padding: 30px 0; color: #aaa; font-size: 14px; }
+
   .rs-who-wrap { display: none; margin-bottom: 20px; } /* hidden until admin opens sheet */
   .rs-who-wrap.visible { display: block; }
   .rs-who-select {
@@ -691,6 +751,17 @@
   <button class="rs-create-btn" id="rsCreateBtn" onclick="createReminderFromSheet()">Create Reminder</button>
 </div>
 
+<!-- Check Reminder Sheet -->
+<div class="reminder-sheet-backdrop" id="crBackdrop" onclick="closeCheckSheet()"></div>
+<div class="cr-sheet" id="checkSheet">
+  <div class="reminder-sheet-handle"></div>
+  <div class="reminder-sheet-title">
+    <span>📋 My Reminders</span>
+    <button class="reminder-sheet-close" onclick="closeCheckSheet()">✕</button>
+  </div>
+  <div id="crList"><div class="cr-empty">Loading...</div></div>
+</div>
+
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo-icon">
@@ -730,18 +801,15 @@
     
     window.scrollTo(0, 0);
     
-    // Reminder sheet: 键盘弹起时整体上移，不被遮挡
-    const sheet = document.getElementById('reminderSheet');
-    if (sheet && sheet.classList.contains('open')) {
-      const kbHeight = window.innerHeight - vv.height - (vv.offsetTop || 0);
-      if (kbHeight > 50) {
-        sheet.style.bottom = kbHeight + 'px';
-        sheet.style.maxHeight = (vv.height - 20) + 'px';
-      } else {
-        sheet.style.bottom = '0';
-        sheet.style.maxHeight = '85vh';
+    // Reminder sheets: 键盘弹起时整体上移，不被遮挡
+    ['reminderSheet', 'checkSheet'].forEach(sid => {
+      const s = document.getElementById(sid);
+      if (s && s.classList.contains('open')) {
+        const kbH = window.innerHeight - vv.height - (vv.offsetTop || 0);
+        if (kbH > 50) { s.style.bottom = kbH + 'px'; s.style.maxHeight = (vv.height - 20) + 'px'; }
+        else { s.style.bottom = '0'; s.style.maxHeight = '85vh'; }
       }
-    }
+    });
   }
 
   if (vv) {
@@ -922,8 +990,129 @@
     openReminderSheet();
   }
   function checkReminder() {
-    const cn = /^zh/i.test(navigator.language);
-    quickSend(cn ? '查看我的提醒' : 'Check my reminders');
+    openCheckSheet();
+  }
+
+  // ── Check Reminder Sheet ──
+  async function openCheckSheet() {
+    document.getElementById('crBackdrop').classList.add('visible');
+    document.getElementById('checkSheet').classList.add('open');
+    document.getElementById('crList').innerHTML = '<div class="cr-empty">Loading...</div>';
+    
+    try {
+      const res = await fetch(`${BACKEND}/api/my-reminders?session_token=${encodeURIComponent(currentUser?.session_token || '')}`);
+      const data = await res.json();
+      if (data.error) { document.getElementById('crList').innerHTML = `<div class="cr-empty" style="color:#dc2626">${escHtml(data.error)}</div>`; return; }
+      if (!data.reminders || !data.reminders.length) {
+        document.getElementById('crList').innerHTML = '<div class="cr-empty">No pending reminders</div>';
+        return;
+      }
+      renderCheckList(data.reminders);
+    } catch(e) {
+      document.getElementById('crList').innerHTML = `<div class="cr-empty" style="color:#dc2626">Error: ${escHtml(e.message)}</div>`;
+    }
+  }
+
+  function closeCheckSheet() {
+    document.getElementById('crBackdrop').classList.remove('visible');
+    const sheet = document.getElementById('checkSheet');
+    sheet.classList.remove('open');
+    sheet.style.bottom = '0';
+    sheet.style.maxHeight = '85vh';
+  }
+
+  function renderCheckList(reminders) {
+    const chk = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+    const html = reminders.map(r => {
+      const channels = (r.channels || []).map(ch => {
+        if (ch === 'email') return '<span class="cr-item-ch cr-ch-email">📧 Email</span>';
+        return '<span class="cr-item-ch cr-ch-call">📞 Call</span>';
+      }).join('');
+      const hasEmail = (r.channels || []).includes('email');
+      const hasCall = (r.channels || []).includes('call');
+      // Convert fire_at_iso to local time for the datetime-local input
+      const localISO = r.fire_at_iso ? new Date(r.fire_at_iso + 'Z').toLocaleString('sv-SE', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).replace(' ', 'T') : '';
+      
+      return `<div class="cr-item" id="cr_${r.id}">
+        <div class="cr-item-header">
+          <div style="flex:1;min-width:0">
+            <div class="cr-item-content">${escHtml(r.content)}</div>
+            <div class="cr-item-time">⏰ ${escHtml(r.fire_at_la || '')}</div>
+            <div class="cr-item-channels">${channels}</div>
+          </div>
+          <div class="cr-item-actions">
+            <button class="cr-btn-edit" onclick="toggleCrEdit(${r.id})">Edit</button>
+            <button class="cr-btn-del" onclick="deleteCr(${r.id})">Delete</button>
+          </div>
+        </div>
+        <div class="cr-edit-form" id="crEdit_${r.id}">
+          <input class="cr-edit-input" id="crContent_${r.id}" value="${escHtml(r.content)}" placeholder="Content">
+          <input class="cr-edit-input" id="crTime_${r.id}" type="datetime-local" value="${localISO}">
+          <div class="cr-edit-row">
+            <button class="cr-edit-ch ${hasEmail ? 'active' : ''}" id="crEmail_${r.id}" onclick="this.classList.toggle('active')">
+              <span class="cr-chk">${chk}</span> 📧 Email
+            </button>
+            <button class="cr-edit-ch ${hasCall ? 'active' : ''}" id="crCall_${r.id}" onclick="this.classList.toggle('active')">
+              <span class="cr-chk">${chk}</span> 📞 Call
+            </button>
+          </div>
+          <button class="cr-edit-save" onclick="saveCr(${r.id})">Save Changes</button>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('crList').innerHTML = html;
+  }
+
+  function toggleCrEdit(id) {
+    const form = document.getElementById('crEdit_' + id);
+    form.classList.toggle('active');
+  }
+
+  async function saveCr(id) {
+    const content = document.getElementById('crContent_' + id)?.value?.trim() || '';
+    const timeVal = document.getElementById('crTime_' + id)?.value || '';
+    const hasEmail = document.getElementById('crEmail_' + id)?.classList.contains('active');
+    const hasCall = document.getElementById('crCall_' + id)?.classList.contains('active');
+    const channels = [];
+    if (hasEmail) channels.push('email');
+    if (hasCall) channels.push('call');
+    if (!channels.length) { alert('Select at least one method'); return; }
+
+    // Convert local time to LA time
+    let fireAtLA = '';
+    if (timeVal) {
+      const dt = new Date(timeVal);
+      fireAtLA = dt.toLocaleString('sv-SE', {
+        timeZone: 'America/Los_Angeles',
+        year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false
+      }).replace(' ', 'T') + ':00';
+    }
+
+    try {
+      const res = await fetch(`${BACKEND}/api/my-reminders/${id}?session_token=${encodeURIComponent(currentUser?.session_token || '')}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ content, fire_at: fireAtLA, channels })
+      });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error); return; }
+      // Reload list
+      openCheckSheet();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function deleteCr(id) {
+    if (!confirm('Delete this reminder?')) return;
+    try {
+      const res = await fetch(`${BACKEND}/api/my-reminders/${id}?session_token=${encodeURIComponent(currentUser?.session_token || '')}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error); return; }
+      document.getElementById('cr_' + id)?.remove();
+      // Check if list is empty
+      if (!document.getElementById('crList').querySelector('.cr-item')) {
+        document.getElementById('crList').innerHTML = '<div class="cr-empty">No pending reminders</div>';
+      }
+    } catch(e) { alert('Error: ' + e.message); }
   }
 
   // ── Reminder Quick-Create Sheet ──
