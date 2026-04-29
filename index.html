@@ -942,14 +942,24 @@
     // Admin only: show "Remind who?" and fetch Odoo users
     const whoWrap = document.getElementById('rsWhoWrap');
     const whoSelect = document.getElementById('rsWho');
+    whoWrap.classList.remove('visible');  // 先隐藏，只有确认 admin 才显示
+    whoSelect.innerHTML = '<option value="">Myself</option>';
+    
     if (currentUser && currentUser.role === 'admin') {
       whoWrap.classList.add('visible');
       whoSelect.innerHTML = '<option value="">Myself</option><option disabled>Loading…</option>';
       fetch(`${BACKEND}/api/reminder-users?session_token=${encodeURIComponent(currentUser.session_token || '')}`)
         .then(r => r.json())
         .then(data => {
+          console.log('[RS] reminder-users response:', data);
           whoSelect.innerHTML = '<option value="">Myself</option>';
-          if (data.users) {
+          if (data.error) {
+            // Not admin or auth failed → hide dropdown
+            whoWrap.classList.remove('visible');
+            console.log('[RS] hiding dropdown:', data.error);
+            return;
+          }
+          if (data.users && data.users.length) {
             data.users.forEach(u => {
               if (u.uid !== currentUser.uid) {
                 const opt = document.createElement('option');
@@ -958,11 +968,10 @@
                 whoSelect.appendChild(opt);
               }
             });
+            console.log('[RS] dropdown options:', whoSelect.options.length - 1, 'users added');
           }
         })
-        .catch(() => { whoSelect.innerHTML = '<option value="">Myself</option>'; });
-    } else {
-      whoWrap.classList.remove('visible');
+        .catch(e => { console.error('[RS] fetch error:', e); whoWrap.classList.remove('visible'); });
     }
     
     document.getElementById('rsBackdrop').classList.add('visible');
