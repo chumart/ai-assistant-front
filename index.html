@@ -702,18 +702,28 @@
   
   function updateAppHeight() {
     if (!vv) return;
-    // 强制赋予肉眼可见的真实高度
     document.documentElement.style.setProperty('--app-height', `${vv.height}px`);
     
-    // 键盘弹起检测：如果可视高度大幅度变小
     if (vv.height < window.screen.height - 150) {
-      document.documentElement.style.setProperty('--safe-bottom', '0px'); // 弹起时去掉小白条避让
+      document.documentElement.style.setProperty('--safe-bottom', '0px');
     } else {
-      document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom)'); // 收起时恢复
+      document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom)');
     }
     
-    // 强行把可能被 Safari 顶上去的页面拉回原位
-    window.scrollTo(0, 0); 
+    window.scrollTo(0, 0);
+    
+    // Reminder sheet: 键盘弹起时整体上移，不被遮挡
+    const sheet = document.getElementById('reminderSheet');
+    if (sheet && sheet.classList.contains('open')) {
+      const kbHeight = window.innerHeight - vv.height - (vv.offsetTop || 0);
+      if (kbHeight > 50) {
+        sheet.style.bottom = kbHeight + 'px';
+        sheet.style.maxHeight = (vv.height - 20) + 'px';
+      } else {
+        sheet.style.bottom = '0';
+        sheet.style.maxHeight = '85vh';
+      }
+    }
   }
 
   if (vv) {
@@ -919,8 +929,11 @@
   }
 
   function closeReminderSheet() {
+    const sheet = document.getElementById('reminderSheet');
     document.getElementById('rsBackdrop').classList.remove('visible');
-    document.getElementById('reminderSheet').classList.remove('open');
+    sheet.classList.remove('open');
+    sheet.style.bottom = '0';
+    sheet.style.maxHeight = '85vh';
   }
 
   function toggleMethod(id) {
