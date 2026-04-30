@@ -227,7 +227,7 @@
 
   /* ── 4. 输入区域排版 ── */
   .input-area {
-    position: absolute; bottom: 0; left: 0; right: 0;
+    flex-shrink: 0;
     background: linear-gradient(to top, #fff 75%, transparent);
     padding: 16px 24px 24px; display: flex; flex-direction: column; align-items: center;
   }
@@ -1591,21 +1591,40 @@
   function buildExtraButton(text) {
     const MONTHS = {january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
     let y, m;
-    // Try Chinese format: 2026年4月
-    const zhMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
-    // Try English format: April 2026 / March 2026
-    const enMatch = text.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i);
-    if (zhMatch) { y = zhMatch[1]; m = zhMatch[2].padStart(2,'0'); }
-    else if (enMatch) { y = enMatch[2]; m = MONTHS[enMatch[1].toLowerCase()]; }
-    else return '';
+    // Try Chinese format: 2026年4月 or 26年4月
+    const zhMatch = text.match(/(\d{2,4})[年](\d{1,2})[月]/);
+    // Try English: "April 2026" or "2026 April"
+    const monthNames = 'january|february|march|april|may|june|july|august|september|october|november|december';
+    const enMatch1 = text.match(new RegExp(`(${monthNames})\\s+(\\d{4})`, 'i'));
+    const enMatch2 = text.match(new RegExp(`(\\d{4})\\s+(${monthNames})`, 'i'));
+    // Try ISO: 2026-04
+    const isoMatch = text.match(/(\d{4})-(\d{2})(?:\s|,|$)/);
+    
+    if (zhMatch) {
+      y = zhMatch[1].length === 2 ? '20' + zhMatch[1] : zhMatch[1];
+      m = zhMatch[2].padStart(2, '0');
+    } else if (enMatch1) {
+      y = enMatch1[2]; m = MONTHS[enMatch1[1].toLowerCase()];
+    } else if (enMatch2) {
+      y = enMatch2[1]; m = MONTHS[enMatch2[2].toLowerCase()];
+    } else if (isoMatch) {
+      y = isoMatch[1]; m = isoMatch[2];
+    } else {
+      return '';
+    }
 
-    if (!(text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) return '';
+    const commissionKeywords = ['Commission', 'commission', '提成', '销售提成', '销售员销售统计', 'Sales Report', 'sales report'];
+    if (!commissionKeywords.some(kw => text.includes(kw))) return '';
 
-    const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|'s|\s)\s*(?:\d{4}\s*年|(?:January|February|March|April|May|June|July|August|September|October|November|December))/i);
-    let url = `${BACKEND}/export/commission?year=${y}&month=${m}`; let label = `Download Excel · ${y}年${m}月 Full Report`;
-    const excludeNames = ['PART','Commission','Monthly','Report','Total','Grand','January','February','March','April','May','June','July','August','September','October','November','December'];
+    // Detect specific salesperson
+    const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|'s|\s)\s*(?:\d{2,4}\s*年|(?:January|February|March|April|May|June|July|August|September|October|November|December))/i);
+    let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
+    let label = `Download Excel · ${y}/${m} Full Report`;
+    const excludeNames = ['PART','Commission','Monthly','Report','Total','Grand','Sales','January','February','March','April','May','June','July','August','September','October','November','December'];
     if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售') && !text.includes('all salesperson')) {
-      const sp = encodeURIComponent(spMatch[1].trim()); url += `&salesperson=${sp}`; label = `Download Excel · ${spMatch[1].trim()} ${y}/${m}`;
+      const sp = encodeURIComponent(spMatch[1].trim());
+      url += `&salesperson=${sp}`;
+      label = `Download Excel · ${spMatch[1].trim()} ${y}/${m}`;
     }
     return `<a href="${url}" target="_blank" download style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>${label}</a>`;
   }
