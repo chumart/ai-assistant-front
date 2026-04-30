@@ -42,7 +42,7 @@
 
   /* ── 1. 全局布局 ── */
   html, body {
-    height: var(--app-height); 
+    height: 100dvh;
     width: 100%;
     margin: 0;
     padding: 0;
@@ -532,7 +532,7 @@
 
   /* ── Mobile breakpoint ── */
   @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
-    html, body { position: fixed; inset: 0; touch-action: none; }
+    html, body { height: var(--app-height); position: fixed; inset: 0; touch-action: none; }
     .menu-btn { display: flex; }
 
     .sidebar {
@@ -1372,16 +1372,7 @@
   function renderBotMsgDOM(text, isError) {
     const row = document.createElement('div'); row.className = 'message-wrapper bot';
     const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
-    let extraBtn = ''; const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
-    if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
-      const y = ymMatch[1], m = ymMatch[2].padStart(2,'0'); const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|\s)\s*\d{4}\s*年/);
-      let url = `${BACKEND}/export/commission?year=${y}&month=${m}`; let label = `Download Excel · ${y}年${m}月 Full Report`;
-      const excludeNames = ['PART','Commission','Monthly','Report'];
-      if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售')) {
-        const sp = encodeURIComponent(spMatch[1].trim()); url += `&salesperson=${sp}`; label = `Download Excel · ${spMatch[1].trim()} ${y}年${m}月`;
-      }
-      extraBtn = `<a href="${url}" target="_blank" download style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>${label}</a>`;
-    }
+    let extraBtn = buildExtraButton(text);
     row.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content ${isError?'error-text':''}">${formatText(text)}${extraBtn}</div>`;
     msgList.appendChild(row);
   }
@@ -1598,14 +1589,25 @@
   }
 
   function buildExtraButton(text) {
-    const ymMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
-    if (ymMatch && (text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) {
-      const y = ymMatch[1], m = ymMatch[2].padStart(2,'0'); const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|\s)\s*\d{4}\s*年/);
-      let url = `${BACKEND}/export/commission?year=${y}&month=${m}`; let label = `Download Excel · ${y}年${m}月 Full Report`;
-      const excludeNames = ['PART','Commission','Monthly','Report'];
-      if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售')) { const sp = encodeURIComponent(spMatch[1].trim()); url += `&salesperson=${sp}`; label = `Download Excel · ${spMatch[1].trim()} ${y}年${m}月`; }
-      return `<a href="${url}" target="_blank" download style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>${label}</a>`;
-    } return '';
+    const MONTHS = {january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
+    let y, m;
+    // Try Chinese format: 2026年4月
+    const zhMatch = text.match(/(\d{4})[年](\d{1,2})[月]/);
+    // Try English format: April 2026 / March 2026
+    const enMatch = text.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i);
+    if (zhMatch) { y = zhMatch[1]; m = zhMatch[2].padStart(2,'0'); }
+    else if (enMatch) { y = enMatch[2]; m = MONTHS[enMatch[1].toLowerCase()]; }
+    else return '';
+
+    if (!(text.includes('Commission') || text.includes('commission') || text.includes('提成') || text.includes('销售提成') || text.includes('销售员销售统计'))) return '';
+
+    const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|'s|\s)\s*(?:\d{4}\s*年|(?:January|February|March|April|May|June|July|August|September|October|November|December))/i);
+    let url = `${BACKEND}/export/commission?year=${y}&month=${m}`; let label = `Download Excel · ${y}年${m}月 Full Report`;
+    const excludeNames = ['PART','Commission','Monthly','Report','Total','Grand','January','February','March','April','May','June','July','August','September','October','November','December'];
+    if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售') && !text.includes('all salesperson')) {
+      const sp = encodeURIComponent(spMatch[1].trim()); url += `&salesperson=${sp}`; label = `Download Excel · ${spMatch[1].trim()} ${y}/${m}`;
+    }
+    return `<a href="${url}" target="_blank" download style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>${label}</a>`;
   }
 
   async function doLogin() {
