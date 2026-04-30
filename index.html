@@ -43,14 +43,11 @@
   /* ── 1. 全局布局 ── */
   html, body {
     height: var(--app-height); 
-    position: fixed; 
-    inset: 0;
     width: 100%;
     margin: 0;
     padding: 0;
     overflow: hidden;
     overscroll-behavior: none;
-    touch-action: none;
     background: var(--bg);
     font-family: 'Inter', -apple-system, sans-serif;
     color: var(--text-primary);
@@ -535,6 +532,7 @@
 
   /* ── Mobile breakpoint ── */
   @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
+    html, body { position: fixed; inset: 0; touch-action: none; }
     .menu-btn { display: flex; }
 
     .sidebar {
