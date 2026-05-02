@@ -1032,7 +1032,7 @@
             + '<th style="padding:6px 8px">Product</th>'
             + '<th style="padding:6px 8px;text-align:right">Qty</th>'
             + '<th style="padding:6px 8px">ETA</th>'
-            + '<th style="padding:6px 8px">Container</th>'
+            + '<th style="padding:6px 8px">Shipment</th>'
             + '<th style="padding:6px 8px">Status</th>'
             + '</tr></thead><tbody>';
       const statusLabels = { draft: '📝 Draft', shipped: '🚀 Shipped', in_transit: '🚢 In Transit', arrived: '✅ Arrived' };
@@ -1051,7 +1051,7 @@
               + `<td style="padding:5px 8px">${escHtml(item.product_name)}</td>`
               + `<td style="padding:5px 8px;text-align:right">${item.qty}</td>`
               + `<td style="padding:5px 8px;${etaStyle}">${escHtml(eta)}</td>`
-              + `<td style="padding:5px 8px;font-size:12px">${escHtml(item.container || '—')}</td>`
+              + `<td style="padding:5px 8px;font-size:12px">${escHtml(item.shipment || '—')}</td>`
               + `<td style="padding:5px 8px">${statusLabels[item.status] || escHtml(item.status)}</td>`
               + `</tr>`;
       }
