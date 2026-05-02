@@ -689,6 +689,7 @@
         <div class="suggestions-grid">
           <button class="suggestion-card desktop-only" onclick="quickSend('Show me recent sales orders')">📊 Recent sales orders</button>
           <button class="suggestion-card" onclick="quickSend('Check inventory for 54rs')">📦 Check 54rs inventory</button>
+          <button class="suggestion-card" onclick="loadShipmentETA()">🚢 Incoming shipments</button>
           <button class="suggestion-card desktop-only" onclick="quickSend('Find contact info for a specific customer')">👥 Find customer</button>
           <button class="suggestion-card" onclick="quickSend('How do I maintain this equipment daily?')">🔧 Product training</button>
           <button class="suggestion-card mobile-only" onclick="checkReminder()">📋 Check reminder</button>
@@ -994,6 +995,75 @@
   input.addEventListener('input', () => { if (busy) return; sendBtn.disabled = !input.value.trim() || isUploading; });
   function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
   function quickSend(t) { input.value = t; sendMessage(); }
+
+  async function loadShipmentETA() {
+    if (busy) return;
+    busy = true;
+    hideEmpty();
+
+    // Show user "message"
+    const userRow = document.createElement('div');
+    userRow.className = 'message-wrapper user';
+    userRow.innerHTML = `<div class="message-content"><div class="user-bubble">🚢 Incoming shipments</div></div>`;
+    msgList.appendChild(userRow);
+
+    // Show bot loading
+    const botRow = document.createElement('div');
+    botRow.className = 'message-wrapper bot';
+    const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
+    botRow.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content"><div class="stream-content"><div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div>`;
+    msgList.appendChild(botRow);
+    const contentEl = botRow.querySelector('.stream-content');
+    scrollBottom();
+
+    try {
+      const res = await fetch(BACKEND + '/report/shipment-eta');
+      const data = await res.json();
+      if (data.error) { contentEl.innerHTML = `<span class="error-text">Error: ${escHtml(data.error)}</span>`; return; }
+      if (!data.items || data.items.length === 0) {
+        contentEl.innerHTML = '<p>📭 No incoming shipments found (all arrived or none tracked).</p>';
+        return;
+      }
+      // Group by ETA for cleaner display
+      let html = `<p><strong>🚢 Incoming Shipments</strong> — ${data.total} items in transit (as of ${escHtml(data.as_of)})</p>`;
+      html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px">';
+      html += '<thead><tr style="border-bottom:2px solid #ddd;text-align:left">'
+            + '<th style="padding:6px 8px">SKU</th>'
+            + '<th style="padding:6px 8px">Product</th>'
+            + '<th style="padding:6px 8px;text-align:right">Qty</th>'
+            + '<th style="padding:6px 8px">ETA</th>'
+            + '<th style="padding:6px 8px">Container</th>'
+            + '<th style="padding:6px 8px">Status</th>'
+            + '</tr></thead><tbody>';
+      const statusLabels = { draft: '📝 Draft', shipped: '🚀 Shipped', in_transit: '🚢 In Transit', arrived: '✅ Arrived' };
+      for (const item of data.items) {
+        const eta = item.eta || '—';
+        const today = data.as_of;
+        // Highlight if arriving within 7 days
+        let etaStyle = '';
+        if (item.eta) {
+          const diff = (new Date(item.eta) - new Date(today)) / 86400000;
+          if (diff <= 7) etaStyle = 'color:#d97706;font-weight:600';
+          if (diff <= 3) etaStyle = 'color:#dc2626;font-weight:600';
+        }
+        html += `<tr style="border-bottom:1px solid #eee">`
+              + `<td style="padding:5px 8px;font-family:monospace;font-weight:600">${escHtml(item.sku)}</td>`
+              + `<td style="padding:5px 8px">${escHtml(item.product_name)}</td>`
+              + `<td style="padding:5px 8px;text-align:right">${item.qty}</td>`
+              + `<td style="padding:5px 8px;${etaStyle}">${escHtml(eta)}</td>`
+              + `<td style="padding:5px 8px;font-size:12px">${escHtml(item.container || '—')}</td>`
+              + `<td style="padding:5px 8px">${statusLabels[item.status] || escHtml(item.status)}</td>`
+              + `</tr>`;
+      }
+      html += '</tbody></table></div>';
+      contentEl.innerHTML = html;
+    } catch (e) {
+      contentEl.innerHTML = `<span class="error-text">Failed to load: ${escHtml(e.message)}</span>`;
+    } finally {
+      busy = false;
+      scrollBottom();
+    }
+  }
   function startReminder() {
     openReminderSheet();
   }
