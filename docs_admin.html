@@ -395,10 +395,45 @@
     <button onclick="toggleReminders()" id="reminderToggleBtn" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
       ⏰ <span id="reminderBtnLabel">Reminders</span> <span id="reminderBadge" style="background:#ca8a04;color:#fff;padding:1px 7px;border-radius:10px;font-size:11px;display:none">0</span>
     </button>
+    <button onclick="togglePOReminders()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+      📦 PO Reminders
+    </button>
     <a href="/" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       Back to Chat
     </a>
+  </div>
+</div>
+
+<!-- PO Reminders Panel (hidden by default) -->
+<div id="poReminderPanel" style="display:none">
+  <div class="container" style="padding-bottom:0">
+    <div class="reminder-card">
+      <div class="reminder-header">
+        <h3>📦 PO Confirmation Reminders</h3>
+        <p style="font-size:13px;color:#666;margin-top:4px">每天定时通过 Odoo Bot 提醒 Ashley 确认 PO 单</p>
+      </div>
+      <div style="margin:16px 0;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="min-width:120px">
+          <label>Time (PT, 24h)</label>
+          <input type="text" id="poNewTime" placeholder="e.g. 10:30" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+        </div>
+        <div class="form-group" style="min-width:120px">
+          <label>Send to</label>
+          <input type="text" id="poNewTarget" value="Ashley" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+        </div>
+        <div class="form-group" style="min-width:160px">
+          <label>Only payment-triggered POs</label>
+          <select id="poNewOnlyPayment" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <option value="true" selected>Yes (recommended)</option>
+            <option value="false">No (all draft POs)</option>
+          </select>
+        </div>
+        <button onclick="addPOReminder()" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
+        <button onclick="testPOReminder()" style="padding:8px 16px;background:#ca8a04;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test Now</button>
+      </div>
+      <div id="poReminderList" style="margin-top:12px"></div>
+    </div>
   </div>
 </div>
 
@@ -1162,6 +1197,108 @@
     } catch(e) {
       showModal('Delete failed', esc(e.message), '⚠️');
     }
+  }
+
+  // ── PO Reminders Management ──────────────────────────────────────
+  function togglePOReminders() {
+    const panel = document.getElementById('poReminderPanel');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    // Hide other panels
+    document.getElementById('reminderPanel').style.display = 'none';
+    if (isHidden) loadPOReminders();
+  }
+
+  async function loadPOReminders() {
+    try {
+      const res = await fetch(`${BACKEND}/admin/po-reminders?admin_key=${encodeURIComponent(adminKey)}`);
+      const data = await res.json();
+      if (data.error) { document.getElementById('poReminderList').innerHTML = `<p style="color:red">${esc(data.error)}</p>`; return; }
+      renderPOReminders(data.schedules || []);
+    } catch(e) {
+      document.getElementById('poReminderList').innerHTML = `<p style="color:red">${esc(e.message)}</p>`;
+    }
+  }
+
+  function renderPOReminders(schedules) {
+    if (!schedules.length) {
+      document.getElementById('poReminderList').innerHTML = '<p style="color:#888;font-size:13px">No PO reminder schedules. Add one above.</p>';
+      return;
+    }
+    const rows = schedules.map(s => {
+      const h = parseInt(s.time_pt.split(':')[0]);
+      const m = s.time_pt.split(':')[1];
+      const period = h < 12 ? 'AM' : 'PM';
+      const dh = h % 12 || 12;
+      const displayTime = `${dh}:${m} ${period} PT`;
+      const statusBadge = s.active
+        ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
+        : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Inactive</span>';
+      const onlyPayment = s.only_payment_pos ? '付款触发 PO' : '所有 Draft PO';
+      return `<tr>
+        <td>${s.id}</td>
+        <td style="font-weight:600">${displayTime}</td>
+        <td>${esc(s.target_user)}</td>
+        <td>${onlyPayment}</td>
+        <td>${statusBadge}</td>
+        <td style="display:flex;gap:6px">
+          <button onclick="togglePOSchedule(${s.id}, ${!s.active})" style="padding:4px 10px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸ Pause' : '▶ Enable'}</button>
+          <button onclick="deletePOSchedule(${s.id})" style="padding:4px 10px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑 Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+    document.getElementById('poReminderList').innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="reminder-table">
+          <thead><tr><th>ID</th><th>Time</th><th>Send to</th><th>Filter</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function addPOReminder() {
+    const time = document.getElementById('poNewTime').value.trim();
+    const target = document.getElementById('poNewTarget').value.trim();
+    const onlyPayment = document.getElementById('poNewOnlyPayment').value === 'true';
+    if (!time) { alert('Please enter a time in HH:MM format'); return; }
+    try {
+      const res = await fetch(`${BACKEND}/admin/po-reminders?admin_key=${encodeURIComponent(adminKey)}&time_pt=${encodeURIComponent(time)}&target_user=${encodeURIComponent(target)}&only_payment_pos=${onlyPayment}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      document.getElementById('poNewTime').value = '';
+      await loadPOReminders();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function togglePOSchedule(id, newActive) {
+    try {
+      const res = await fetch(`${BACKEND}/admin/po-reminders/${id}?admin_key=${encodeURIComponent(adminKey)}&active=${newActive}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      await loadPOReminders();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function deletePOSchedule(id) {
+    if (!confirm('Delete this PO reminder schedule?')) return;
+    try {
+      const res = await fetch(`${BACKEND}/admin/po-reminders/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      await loadPOReminders();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function testPOReminder() {
+    const target = document.getElementById('poNewTarget').value.trim() || 'Ashley';
+    const onlyPayment = document.getElementById('poNewOnlyPayment').value === 'true';
+    if (!confirm(`Send a test PO reminder to ${target} right now?`)) return;
+    try {
+      const res = await fetch(`${BACKEND}/admin/po-reminders/test?admin_key=${encodeURIComponent(adminKey)}&target_user=${encodeURIComponent(target)}&only_payment_pos=${onlyPayment}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error); return; }
+      alert('Test reminder sent! Check Odoo Discuss.');
+    } catch(e) { alert(e.message); }
   }
 </script>
 </body>
