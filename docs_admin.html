@@ -407,17 +407,17 @@
 
 <!-- Scheduled Messages Panel (hidden by default) -->
 <div id="poReminderPanel" style="display:none">
-  <div class="container" style="padding-bottom:0">
+  <div class="container" style="padding-bottom:0;padding-left:32px;padding-right:32px">
     <div class="reminder-card">
       <div class="reminder-header">
         <h3>📦 Scheduled Messages</h3>
       </div>
       <div style="margin:16px 0;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-        <div class="form-group" style="min-width:110px">
+        <div class="form-group" style="min-width:100px;width:100px">
           <label>TIME (PT, 24H)</label>
           <input type="text" id="poNewTime" placeholder="e.g. 10:30" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
         </div>
-        <div class="form-group" style="min-width:140px">
+        <div class="form-group" style="min-width:150px">
           <label>SEND TO</label>
           <select id="poNewTarget" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
             <option value="ALL">All Internal Users</option>
@@ -427,7 +427,7 @@
           <label>MESSAGE CONTENT</label>
           <input type="text" id="poNewMessage" placeholder="e.g. Please confirm today's PO orders" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
         </div>
-        <div class="form-group" style="min-width:140px">
+        <div class="form-group" style="min-width:160px">
           <label>AUTO-ATTACH PO LIST</label>
           <select id="poNewOnlyPayment" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
             <option value="none">No</option>
@@ -1250,39 +1250,61 @@
       document.getElementById('poReminderList').innerHTML = '<p style="color:#888;font-size:13px">No scheduled messages yet. Add one above.</p>';
       return;
     }
+    const userOptions = '<option value="ALL">Everyone</option>' + poOdooUsers.map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');
     const rows = schedules.map(s => {
-      const h = parseInt(s.time_pt.split(':')[0]);
-      const m = s.time_pt.split(':')[1];
-      const period = h < 12 ? 'AM' : 'PM';
-      const dh = h % 12 || 12;
-      const displayTime = `${dh}:${m} ${period} PT`;
+      const poMode = s.only_payment_pos || 'none';
       const statusBadge = s.active
         ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
         : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Paused</span>';
-      const poMode = s.only_payment_pos || 'none';
-      const poLabel = poMode === 'payment' ? '+ Payment POs' : poMode === 'all_draft' ? '+ All Draft POs' : '';
-      const msgPreview = s.message ? esc(s.message).substring(0, 50) + (s.message.length > 50 ? '...' : '') : '<span style="color:#999">—</span>';
-      const sendTo = s.target_user === 'ALL' ? 'Everyone' : esc(s.target_user);
-      return `<tr>
+      return `<tr id="po-row-${s.id}">
         <td>${s.id}</td>
-        <td style="font-weight:600">${displayTime}</td>
-        <td>${sendTo}</td>
-        <td title="${esc(s.message || '')}">${msgPreview}</td>
-        <td>${poLabel ? '<span style="background:#e0e7ff;color:#3b82f6;padding:2px 6px;border-radius:6px;font-size:11px">' + poLabel + '</span>' : ''}</td>
+        <td><input type="text" value="${esc(s.time_pt)}" id="po-time-${s.id}" style="width:60px;padding:4px 6px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="savePOSchedule(${s.id})"></td>
+        <td><select id="po-target-${s.id}" style="padding:4px 6px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px" onchange="savePOSchedule(${s.id})">${userOptions.replace('value="${esc(s.target_user)}"', 'value="${esc(s.target_user)}" selected')}</select></td>
+        <td><input type="text" value="${esc(s.message || '')}" id="po-msg-${s.id}" style="width:100%;padding:4px 6px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px" onchange="savePOSchedule(${s.id})"></td>
+        <td><select id="po-attach-${s.id}" style="padding:4px 6px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px" onchange="savePOSchedule(${s.id})">
+          <option value="none"${poMode==='none'?' selected':''}>No</option>
+          <option value="payment"${poMode==='payment'?' selected':''}>Payment POs</option>
+          <option value="all_draft"${poMode==='all_draft'?' selected':''}>All Draft POs</option>
+        </select></td>
         <td>${statusBadge}</td>
-        <td style="display:flex;gap:6px">
-          <button onclick="togglePOSchedule(${s.id}, ${!s.active})" style="padding:4px 10px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸ Pause' : '▶ Enable'}</button>
-          <button onclick="deletePOSchedule(${s.id})" style="padding:4px 10px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑 Delete</button>
+        <td style="white-space:nowrap">
+          <button onclick="togglePOSchedule(${s.id}, ${!s.active})" style="padding:4px 10px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸' : '▶'}</button>
+          <button onclick="deletePOSchedule(${s.id})" style="padding:4px 10px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑</button>
         </td>
       </tr>`;
     }).join('');
     document.getElementById('poReminderList').innerHTML = `
       <div style="overflow-x:auto">
         <table class="reminder-table">
-          <thead><tr><th>ID</th><th>Time</th><th>Send to</th><th>Message</th><th>Attachment</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>ID</th><th>Time</th><th>Send to</th><th>Message</th><th>PO Attach</th><th>Status</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
+    // Set selected values for dropdowns after render
+    schedules.forEach(s => {
+      const targetSel = document.getElementById('po-target-' + s.id);
+      if (targetSel) targetSel.value = s.target_user;
+    });
+  }
+
+  async function savePOSchedule(id) {
+    const time = document.getElementById('po-time-' + id)?.value?.trim();
+    const target = document.getElementById('po-target-' + id)?.value;
+    const message = document.getElementById('po-msg-' + id)?.value?.trim();
+    const attach = document.getElementById('po-attach-' + id)?.value;
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey });
+      if (time) params.set('time_pt', time);
+      if (target) params.set('target_user', target);
+      if (message !== undefined) params.set('message', message);
+      if (attach) params.set('only_payment_pos', attach);
+      const res = await fetch(`${BACKEND}/admin/po-reminders/${id}?${params}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      // Brief flash to confirm save
+      const row = document.getElementById('po-row-' + id);
+      if (row) { row.style.background = '#f0fdf4'; setTimeout(() => row.style.background = '', 800); }
+    } catch(e) { alert(e.message); }
   }
 
   async function addPOReminder() {
