@@ -428,7 +428,7 @@
         <div class="form-group" style="min-width:60px;width:60px">
           <label>MIN</label>
           <select id="poNewMin" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <option value="00">:00</option><option value="15">:15</option><option value="30">:30</option><option value="45">:45</option>
+            <script>document.write(Array.from({length:60},(_,i)=>`<option value="${String(i).padStart(2,'0')}">:${String(i).padStart(2,'0')}</option>`).join(''))</script>
           </select>
         </div>
         <div class="form-group" style="min-width:110px">
@@ -498,7 +498,7 @@
   <!-- Search Test (moved up) -->
   <div class="search-card" style="margin-top:0;margin-bottom:28px">
     <h3>Search Test</h3>
-    <p>输入问题，看知识库能找到哪些相关 chunks。用于调试文档是否被正确索引。</p>
+    <p>Enter a question to see which knowledge base chunks are matched. Useful for debugging indexing.</p>
     <div class="search-row">
       <input type="text" class="search-input" id="searchInput"
         placeholder="e.g. How to clean the evaporator coil?"
@@ -1241,8 +1241,8 @@
     // Hide other panels
     document.getElementById('reminderPanel').style.display = 'none';
     if (isHidden) {
-      loadPOOdooUsers();
-      loadPOReminders();
+      // Load users FIRST, then reminders (so dropdown is populated before rendering)
+      loadPOOdooUsers().then(() => loadPOReminders());
     }
   }
 
@@ -1289,6 +1289,14 @@
         ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
         : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Paused</span>';
       const otdInput = freq === 'onetime' ? `<br><input type="date" value="${esc(s.one_time_date||'')}" id="po-otd-${s.id}" style="width:120px;padding:2px 4px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;margin-top:4px" onchange="savePOSchedule(${s.id})">` : '';
+      // Format last_fired_at
+      let lastFired = '—';
+      if (s.last_fired_at) {
+        try {
+          const d = new Date(s.last_fired_at);
+          lastFired = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles' });
+        } catch(e) { lastFired = s.last_fired_at; }
+      }
       return `<tr id="po-row-${s.id}">
         <td>${s.id}</td>
         <td><input type="text" value="${esc(s.time_pt)}" id="po-time-${s.id}" style="width:50px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="savePOSchedule(${s.id})"></td>
@@ -1305,6 +1313,7 @@
           <option value="all_draft"${poMode==='all_draft'?' selected':''}>All Draft</option>
         </select></td>
         <td>${statusBadge}</td>
+        <td style="font-size:11px;color:#888;white-space:nowrap">${lastFired}</td>
         <td style="white-space:nowrap">
           <button onclick="togglePOSchedule(${s.id}, ${!s.active})" style="padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸' : '▶'}</button>
           <button onclick="deletePOSchedule(${s.id})" style="padding:4px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑</button>
@@ -1314,7 +1323,7 @@
     document.getElementById('poReminderList').innerHTML = `
       <div style="overflow-x:auto">
         <table class="reminder-table">
-          <thead><tr><th>ID</th><th>Time</th><th>Frequency</th><th>Send to</th><th>Message</th><th>PO Attach</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>ID</th><th>Time</th><th>Frequency</th><th>Send to</th><th>Message</th><th>PO Attach</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
