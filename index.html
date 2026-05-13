@@ -1060,7 +1060,7 @@
     } catch (e) {
       contentEl.innerHTML = `<span class="error-text">Failed to load: ${escHtml(e.message)}</span>`;
     } finally {
-      busy = false;
+      busy = false; setSendButtonMode('send');
       scrollBottom();
     }
   }
@@ -1573,8 +1573,23 @@
       if (!res.ok) { const errText = await res.text().catch(() => `HTTP ${res.status}`); contentEl.innerHTML = `<span class="error-text">Server error: ${escHtml(errText.slice(0, 300))}</span>`; return; }
       if (!res.body) { contentEl.innerHTML = `<span class="error-text">Streaming not supported in this browser.</span>`; return; }
       const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = '';
+      let lastDataAt = Date.now();
       while (true) {
-        const { value, done } = await reader.read(); if (done) break;
+        // Timeout: if no data for 120 seconds, break out
+        const readPromise = reader.read();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('stream_timeout')), 120000));
+        let readResult;
+        try { readResult = await Promise.race([readPromise, timeoutPromise]); }
+        catch (timeoutErr) {
+          if (timeoutErr.message === 'stream_timeout') {
+            console.warn('[STREAM] Timeout — no data for 120s, closing stream');
+            try { reader.cancel(); } catch {}
+            break;
+          }
+          throw timeoutErr;
+        }
+        const { value, done } = readResult; if (done) break;
+        lastDataAt = Date.now();
         buffer += decoder.decode(value, { stream: true }); let idx;
         while ((idx = buffer.indexOf('\n\n')) !== -1) {
           const rawEvent = buffer.slice(0, idx); buffer = buffer.slice(idx + 2);
