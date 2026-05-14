@@ -1411,7 +1411,7 @@
       const res = await fetch(BACKEND + '/extract-file', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.error) { clearAttachment(); alert('Upload failed: ' + data.error); return; }
-      attachedFile = { name: data.name || file.name, content: data.text || '', fileId: data.file_id || '', isImage: data.is_image || false, previewUrl: data.preview_url || '' };
+      attachedFile = { name: data.name || file.name, content: data.text || '', fileId: data.file_id || '', isImage: data.is_image || false, previewUrl: data.preview_url || '', excelBase64: data.excel_base64 || '' };
       showFilePreview(attachedFile.name, null, false, attachedFile.previewUrl);
     } catch (e) { clearAttachment(); alert('Upload error: ' + e.message); } 
     finally { isUploading = false; sendBtn.disabled = !input.value.trim(); }
@@ -1565,7 +1565,7 @@
       history: history.map(({ role, content, fileId, fileName, fileContent }) => {
         const entry = { role, content }; if (fileId) entry.file_id = fileId; if (fileName) entry.file_name = fileName; if (fileContent) entry.file_content = fileContent; return entry;
       }),
-      file_content: fileForMsg?.content || '', file_name: fileForMsg?.name || '', file_id: fileForMsg?.fileId || '',
+      file_content: fileForMsg?.content || '', file_name: fileForMsg?.name || '', file_id: fileForMsg?.fileId || '', excel_base64: fileForMsg?.excelBase64 || '',
       role: currentUser?.role || 'guest', user_name: currentUser?.name || '', user_id: currentUser?.uid || 0,
       model: selectedModel, free_mode: freeMode, session_id: currentSessionId || '',
       session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20), session_token: currentUser?.session_token || '',
