@@ -483,7 +483,7 @@
         <h3>💳 Stripe Capture Reminders</h3>
       </div>
       <p style="font-size:13px;color:#888;margin:8px 0 4px">
-        提醒 Stripe 已授权但未 capture 的付款 (授权 7 天后过期)。以 CHUMART AI 身份发到收件人的 Discuss 私聊。
+        Reminds you of Stripe payments that are authorized but not yet captured (authorizations expire after 7 days). Sent as CHUMART AI to each recipient's Discuss DM.
       </p>
       <div style="margin:16px 0;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div class="form-group" style="min-width:70px;width:70px">
@@ -512,8 +512,8 @@
           </select>
         </div>
         <div class="form-group" style="min-width:200px;flex:1">
-          <label>RECIPIENTS (勾选内部用户)</label>
-          <div id="capNewRecipients" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;min-height:38px"><span style="color:#aaa;font-size:13px">加载中…</span></div>
+          <label>RECIPIENTS (select internal users)</label>
+          <div id="capNewRecipients" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;min-height:38px"><span style="color:#aaa;font-size:13px">Loading…</span></div>
         </div>
         <button onclick="addCaptureReminder()" style="padding:8px 14px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
         <button onclick="testCaptureReminder()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test</button>
@@ -533,13 +533,13 @@
         <h3>📊 Monthly Commission Reports</h3>
       </div>
       <p style="font-size:13px;color:#888;margin:8px 0 4px">
-        每月自动发上个月的销售提成汇总 (Commission Base 表 B) + 完整 Excel 下载链接。以 CHUMART AI 身份发到收件人的 Discuss 私聊。
+        Automatically sends last month's sales commission summary (Commission Base, Table B) + full Excel every month. Sent as CHUMART AI to each recipient's Discuss DM, and by email (Excel attached).
       </p>
       <div style="margin:16px 0;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div class="form-group" style="min-width:90px;width:90px">
-          <label>DAY (每月几号)</label>
+          <label>DAY (of month)</label>
           <select id="commNewDay" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <script>document.write(Array.from({length:28},(_,i)=>`<option value="${i+1}"${i===0?' selected':''}>${i+1}号</option>`).join(''))</script>
+            <script>document.write(Array.from({length:28},(_,i)=>`<option value="${i+1}"${i===0?' selected':''}>Day ${i+1}</option>`).join(''))</script>
           </select>
         </div>
         <div class="form-group" style="min-width:70px;width:70px">
@@ -560,11 +560,11 @@
           </select>
         </div>
         <div class="form-group" style="min-width:200px;flex:1">
-          <label>RECIPIENTS (勾选内部用户)</label>
-          <div id="commNewRecipients" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;min-height:38px"><span style="color:#aaa;font-size:13px">加载中…</span></div>
+          <label>RECIPIENTS (select internal users)</label>
+          <div id="commNewRecipients" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;min-height:38px"><span style="color:#aaa;font-size:13px">Loading…</span></div>
         </div>
         <button onclick="addCommissionReport()" style="padding:8px 14px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
-        <button onclick="testCommissionReport()" style="padding:8px 14px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test (上月)</button>
+        <button onclick="testCommissionReport()" style="padding:8px 14px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test (last month)</button>
       </div>
       <div id="commReportList" style="margin-top:12px"></div>
     </div>
@@ -1345,7 +1345,7 @@
     return m ? String(m.uid) : v;
   }
   function userCheckboxHtml(selectedCsv) {
-    if (!poOdooUsers.length) return '<span style="color:#aaa;font-size:13px">加载中…</span>';
+    if (!poOdooUsers.length) return '<span style="color:#aaa;font-size:13px">Loading…</span>';
     const raw = String(selectedCsv == null ? '' : selectedCsv).split(',').map(x => x.trim()).filter(Boolean);
     const norm = new Set();
     raw.forEach(v => {
@@ -1630,7 +1630,7 @@
     const freq = document.getElementById('capNewFreq').value;
     const recipients = getCheckedUids('capNewRecipients');
     if (!hour) { alert('Please select an hour'); return; }
-    if (!recipients) { alert('请至少勾选一个收件人'); return; }
+    if (!recipients) { alert('Please select at least one recipient'); return; }
     const time_pt = `${String(hour).padStart(2,'0')}:${min}`;
     try {
       const params = new URLSearchParams({ admin_key: adminKey, time_pt, recipients, frequency: freq });
@@ -1680,7 +1680,7 @@
 
   async function testCaptureReminder() {
     const recipients = getCheckedUids('capNewRecipients');
-    if (!recipients) { alert('请先勾选收件人再测试'); return; }
+    if (!recipients) { alert('Please select recipient(s) before testing'); return; }
     if (!confirm(`Send a test capture reminder to selected user(s) right now?`)) return;
     try {
       const params = new URLSearchParams({ admin_key: adminKey, recipients });
@@ -1747,7 +1747,7 @@
       }
       return `<tr id="comm-row-${s.id}">
         <td>${s.id}</td>
-        <td><input type="number" min="1" max="28" value="${s.day_of_month}" id="comm-day-${s.id}" style="width:60px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"> 号</td>
+        <td><input type="number" min="1" max="28" value="${s.day_of_month}" id="comm-day-${s.id}" style="width:60px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"></td>
         <td><input type="text" value="${esc(s.time_pt)}" id="comm-time-${s.id}" style="width:50px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"></td>
         <td><div id="comm-recip-${s.id}" onchange="saveCommissionSchedule(${s.id})" style="display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;min-width:180px">${userCheckboxHtml(s.recipients)}</div></td>
         <td>${statusBadge}</td>
@@ -1761,7 +1761,7 @@
     document.getElementById('commReportList').innerHTML = `
       <div style="overflow-x:auto">
         <table class="reminder-table">
-          <thead><tr><th>ID</th><th>发送日</th><th>Time</th><th>Recipients</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
+          <thead><tr><th>ID</th><th>Day</th><th>Time</th><th>Recipients</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
@@ -1772,7 +1772,7 @@
     const hour = document.getElementById('commNewHour').value;
     const min = document.getElementById('commNewMin').value;
     const recipients = getCheckedUids('commNewRecipients');
-    if (!recipients) { alert('请至少勾选一个收件人'); return; }
+    if (!recipients) { alert('Please select at least one recipient'); return; }
     const time_pt = `${String(hour).padStart(2,'0')}:${min}`;
     try {
       const params = new URLSearchParams({ admin_key: adminKey, day_of_month: day, time_pt, recipients });
@@ -1822,8 +1822,8 @@
 
   async function testCommissionReport() {
     const recipients = getCheckedUids('commNewRecipients');
-    if (!recipients) { alert('请先勾选收件人再测试'); return; }
-    if (!confirm(`Send a test commission report (上个月) to selected user(s) right now?`)) return;
+    if (!recipients) { alert('Please select recipient(s) before testing'); return; }
+    if (!confirm(`Send a test commission report (last month) to selected user(s) right now?`)) return;
     try {
       const params = new URLSearchParams({ admin_key: adminKey, recipients });
       const res = await fetch(`${BACKEND}/admin/commission-reports/test?${params}`, { method: 'POST' });
