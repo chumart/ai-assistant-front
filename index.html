@@ -401,6 +401,9 @@
     <button onclick="toggleCaptureReminders()" style="padding:8px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
       💳 Capture Reminders
     </button>
+    <button onclick="toggleCommissionReports()" style="padding:8px 16px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+      📊 Commission Reports
+    </button>
     <a href="/" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       Back to Chat
@@ -518,6 +521,52 @@
       </div>
       <div id="capReminderList" style="margin-top:12px"></div>
       <div id="capPreviewBox" style="margin-top:12px;display:none;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;white-space:pre-wrap;font-size:13px;font-family:ui-monospace,monospace"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Commission Reports Panel (hidden by default) -->
+<div id="commissionReportPanel" style="display:none">
+  <div class="container" style="padding-bottom:0;padding-left:32px;padding-right:32px">
+    <div class="reminder-card">
+      <div class="reminder-header">
+        <h3>📊 Monthly Commission Reports</h3>
+      </div>
+      <p style="font-size:13px;color:#888;margin:8px 0 4px">
+        每月自动发上个月的销售提成汇总 (Commission Base 表 B) + 完整 Excel 下载链接。以 CHUMART AI 身份发到收件人的 Discuss 私聊。
+      </p>
+      <div style="margin:16px 0;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="min-width:90px;width:90px">
+          <label>DAY (每月几号)</label>
+          <select id="commNewDay" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <script>document.write(Array.from({length:28},(_,i)=>`<option value="${i+1}"${i===0?' selected':''}>${i+1}号</option>`).join(''))</script>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:70px;width:70px">
+          <label>HOUR</label>
+          <select id="commNewHour" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option>
+            <option value="9" selected>9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option>
+            <option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option>
+            <option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option>
+            <option value="18">6 PM</option><option value="19">7 PM</option><option value="20">8 PM</option>
+            <option value="21">9 PM</option><option value="22">10 PM</option><option value="23">11 PM</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:60px;width:60px">
+          <label>MIN</label>
+          <select id="commNewMin" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <script>document.write(Array.from({length:60},(_,i)=>`<option value="${String(i).padStart(2,'0')}"${i===0?' selected':''}>:${String(i).padStart(2,'0')}</option>`).join(''))</script>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:200px;flex:1">
+          <label>RECIPIENTS (逗号分隔 Odoo 用户名)</label>
+          <input type="text" id="commNewRecipients" value="Ashley,Di" placeholder="e.g. Ashley,Di" style="padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+        </div>
+        <button onclick="addCommissionReport()" style="padding:8px 14px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
+        <button onclick="testCommissionReport()" style="padding:8px 14px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test (上月)</button>
+      </div>
+      <div id="commReportList" style="margin-top:12px"></div>
     </div>
   </div>
 </div>
@@ -1295,6 +1344,8 @@
     document.getElementById('reminderPanel').style.display = 'none';
     const capPanel = document.getElementById('captureReminderPanel');
     if (capPanel) capPanel.style.display = 'none';
+    const commPanel1 = document.getElementById('commissionReportPanel');
+    if (commPanel1) commPanel1.style.display = 'none';
     if (isHidden) {
       // Load users FIRST, then reminders (so dropdown is populated before rendering)
       loadPOOdooUsers().then(() => loadPOReminders());
@@ -1480,6 +1531,8 @@
     panel.style.display = isHidden ? 'block' : 'none';
     document.getElementById('reminderPanel').style.display = 'none';
     document.getElementById('poReminderPanel').style.display = 'none';
+    const commPanel2 = document.getElementById('commissionReportPanel');
+    if (commPanel2) commPanel2.style.display = 'none';
     if (isHidden) loadCaptureReminders();
   }
 
@@ -1613,6 +1666,131 @@
       if (data.pending === 0) { box.textContent = '✅ ' + (data.message || 'No pending capture transactions'); return; }
       box.textContent = data.preview_text || JSON.stringify(data, null, 2);
     } catch(e) { box.textContent = 'Error: ' + e.message; }
+  }
+
+  // ── Commission Reports ──
+  function toggleCommissionReports() {
+    const panel = document.getElementById('commissionReportPanel');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    document.getElementById('reminderPanel').style.display = 'none';
+    const po = document.getElementById('poReminderPanel'); if (po) po.style.display = 'none';
+    const cap = document.getElementById('captureReminderPanel'); if (cap) cap.style.display = 'none';
+    if (isHidden) loadCommissionReports();
+  }
+
+  async function loadCommissionReports() {
+    try {
+      const res = await fetch(`${BACKEND}/admin/commission-reports?admin_key=${encodeURIComponent(adminKey)}`);
+      const data = await res.json();
+      if (data.error) { document.getElementById('commReportList').innerHTML = `<p style="color:red">${esc(data.error)}</p>`; return; }
+      renderCommissionReports(data.schedules || []);
+    } catch(e) {
+      document.getElementById('commReportList').innerHTML = `<p style="color:red">${esc(e.message)}</p>`;
+    }
+  }
+
+  function renderCommissionReports(schedules) {
+    if (!schedules.length) {
+      document.getElementById('commReportList').innerHTML = '<p style="color:#888;font-size:13px">No commission report schedules yet. Add one above.</p>';
+      return;
+    }
+    const rows = schedules.map(s => {
+      const statusBadge = s.active
+        ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
+        : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Paused</span>';
+      let lastFired = '—';
+      if (s.last_fired_at) {
+        try {
+          const d = new Date(s.last_fired_at);
+          lastFired = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles' });
+        } catch(e) { lastFired = s.last_fired_at; }
+      }
+      return `<tr id="comm-row-${s.id}">
+        <td>${s.id}</td>
+        <td><input type="number" min="1" max="28" value="${s.day_of_month}" id="comm-day-${s.id}" style="width:60px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"> 号</td>
+        <td><input type="text" value="${esc(s.time_pt)}" id="comm-time-${s.id}" style="width:50px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"></td>
+        <td><input type="text" value="${esc(s.recipients || '')}" id="comm-recip-${s.id}" style="width:100%;min-width:160px;padding:4px 6px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px" onchange="saveCommissionSchedule(${s.id})"></td>
+        <td>${statusBadge}</td>
+        <td style="font-size:11px;color:#888;white-space:nowrap">${lastFired}</td>
+        <td style="white-space:nowrap">
+          <button onclick="toggleCommissionSchedule(${s.id}, ${!s.active})" style="padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸' : '▶'}</button>
+          <button onclick="deleteCommissionSchedule(${s.id})" style="padding:4px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+    document.getElementById('commReportList').innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="reminder-table">
+          <thead><tr><th>ID</th><th>发送日</th><th>Time</th><th>Recipients</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function addCommissionReport() {
+    const day = document.getElementById('commNewDay').value;
+    const hour = document.getElementById('commNewHour').value;
+    const min = document.getElementById('commNewMin').value;
+    const recipients = document.getElementById('commNewRecipients').value.trim();
+    if (!recipients) { alert('Please enter recipients'); return; }
+    const time_pt = `${String(hour).padStart(2,'0')}:${min}`;
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, day_of_month: day, time_pt, recipients });
+      const res = await fetch(`${BACKEND}/admin/commission-reports?${params}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCommissionReports();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function saveCommissionSchedule(id) {
+    const day = document.getElementById('comm-day-' + id)?.value;
+    const time = document.getElementById('comm-time-' + id)?.value?.trim();
+    const recipients = document.getElementById('comm-recip-' + id)?.value?.trim();
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey });
+      if (day) params.set('day_of_month', day);
+      if (time) params.set('time_pt', time);
+      if (recipients !== undefined) params.set('recipients', recipients);
+      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?${params}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      const row = document.getElementById('comm-row-' + id);
+      if (row) { row.style.background = '#ecfeff'; setTimeout(() => row.style.background = '', 800); }
+    } catch(e) { alert(e.message); }
+  }
+
+  async function toggleCommissionSchedule(id, newActive) {
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, active: newActive });
+      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?${params}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCommissionReports();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function deleteCommissionSchedule(id) {
+    if (!confirm('Delete this commission report schedule?')) return;
+    try {
+      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCommissionReports();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function testCommissionReport() {
+    const recipients = document.getElementById('commNewRecipients').value.trim() || 'Ashley,Di';
+    if (!confirm(`Send a test commission report (上个月) to ${recipients} right now?`)) return;
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, recipients });
+      const res = await fetch(`${BACKEND}/admin/commission-reports/test?${params}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error); return; }
+      alert('Test commission report sent! Check Odoo Discuss.');
+    } catch(e) { alert(e.message); }
   }
 </script>
 </body>
