@@ -2,1835 +2,1786 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chumart Library</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Chumart AI</title>
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<meta name="application-name" content="Chumart AI">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Chumart AI">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23111'/><path d='M50 18 L76 33 L76 67 L50 82 L24 67 L24 33 Z' fill='none' stroke='white' stroke-width='6'/></svg>">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
+  :root {
+    --bg: #ffffff;
+    --sidebar-bg: #f9f9f9;
+    --surface: #f4f4f4;
+    --text-primary: #111111;
+    --text-secondary: #555555;
+    --text-muted: #999999;
+    --accent: #111111;
+    --border: #e8e8e8;
+    --radius-full: 9999px;
+    --radius-lg: 16px;
+    
+    /* iOS 键盘动态接管变量 */
+    --app-height: 100dvh;
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: #fafafa; color: #111; min-height: 100vh; }
 
+  /* ── 1. 全局布局 ── */
+  html, body {
+    height: 100dvh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: var(--bg);
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text-primary);
+    display: flex;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 10px;
+  }
+
+  .new-chat-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 1px solid var(--border);
+    padding: 12px 16px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 500; color: var(--text-primary);
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+  }
+  .new-chat-btn:hover { background: #f0f0f0; }
+
+  .nav-title {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 0 8px; margin: 20px 0 8px;
+  }
+
+  .history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; padding-bottom: 12px; }
+  .history-list::-webkit-scrollbar { width: 3px; }
+  .history-list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+  .history-group-label {
+    font-size: 10px; font-weight: 600; color: #aaa;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 14px 10px 5px; user-select: none;
+  }
+  .history-group-label:first-child { padding-top: 4px; }
+
+  .history-item {
+    padding: 8px 10px; font-size: 12.5px; color: var(--text-secondary);
+    border-radius: 7px; cursor: pointer; line-height: 1.4;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background 0.12s; display: flex; justify-content: space-between; align-items: center;
+    min-height: 32px;
+  }
+  .history-item:hover { background: #ebebeb; color: var(--text-primary); }
+  .history-item.active { background: #e8e8e8; color: var(--text-primary); font-weight: 500; }
+  .trash-btn { display: none; color: var(--text-muted); background: none; border: none; cursor: pointer; font-size: 13px; padding: 0 2px; flex-shrink: 0; }
+  .history-item:hover .trash-btn { display: block; }
+  .trash-btn:hover { color: #e53e3e; }
+
+  /* Sidebar 底部登出按钮 */
+  .sidebar-footer {
+    margin-top: auto; 
+    padding-top: 12px; 
+    border-top: 1px solid var(--border);
+  }
+  .logout-btn-sidebar {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: none; border: none; padding: 12px 10px; 
+    font-size: 13.5px; font-weight: 500; color: #e53e3e; 
+    cursor: pointer; font-family: inherit; border-radius: 8px; 
+    transition: background 0.15s;
+  }
+  .logout-btn-sidebar:hover { background: #fef2f2; }
+
+  /* ── Main ── */
+  .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; min-width: 0; }
+
+  /* ── 2. Gemini 风格 Header ── */
   .header {
-    background: #fff; border-bottom: 1px solid #eaeaea;
-    padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between;
+    height: 60px; display: flex; align-items: center; padding: 0 20px;
+    justify-content: space-between; border-bottom: 1px solid var(--border);
+    position: relative;
   }
-  .header-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-  .header-logo { width: 32px; height: 32px; background: #111; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-  .back-btn { font-size: 13px; color: #666; text-decoration: none; display: flex; align-items: center; gap: 6px; }
-  .back-btn:hover { color: #111; }
-
-  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
-
-  .page-title { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
-  .page-sub { font-size: 14px; color: #666; margin-bottom: 32px; }
-
-  /* Upload card */
-  .upload-card {
-    background: #fff; border: 1px solid #eaeaea; border-radius: 14px;
-    padding: 28px; margin-bottom: 28px;
+  .header-left { display: flex; align-items: center; z-index: 10; }
+  .header-center {
+    display: none; /* 默认隐藏，mobile 才显示 */
   }
-  .upload-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 20px; }
+  .header-right { display: flex; align-items: center; gap: 10px; z-index: 10; }
+  
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #111; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .user-name { font-size: 13px; color: var(--text-secondary); }
+  .role-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px;
+    background: #f0f0f0; color: var(--text-muted); font-weight: 500;
+  }
+  .logout-btn {
+    font-size: 12px; color: var(--text-muted); background: none;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 10px; cursor: pointer; transition: all 0.15s; font-family: inherit;
+  }
+  .logout-btn:hover { border-color: #e53e3e; color: #e53e3e; }
 
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  .form-group { display: flex; flex-direction: column; gap: 6px; }
-  .form-group label { font-size: 12px; font-weight: 500; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
-  .form-group input, .form-group select, .form-group textarea {
-    padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 8px;
-    font-size: 14px; color: #111; background: #fafafa; font-family: inherit; outline: none;
-    transition: all 0.15s;
+  /* ── Chat area ── */
+  .chat-container {
+    flex: 1; overflow-y: auto; padding: 24px 24px 16px;
+    scroll-behavior: smooth; display: flex; flex-direction: column; align-items: center;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
-  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-    border-color: #111; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+  .chat-container::-webkit-scrollbar { width: 5px; }
+  .chat-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 5px; }
+  .chat-container:hover::-webkit-scrollbar-thumb { background: #ddd; }
+
+  .chat-content { width: 100%; max-width: 760px; display: flex; flex-direction: column; }
+  #messageList { display: flex; flex-direction: column; gap: 28px; padding-bottom: 24px; }
+
+  /* ── 3. 空状态 & 提示词排版 (全局/电脑端默认样式) ── */
+  .empty-state { display: flex; flex-direction: column; padding-top: 10vh; width: 100%; animation: fadeIn 0.4s ease; }
+  .greeting-title { font-size: 36px; font-weight: 600; letter-spacing: -0.03em; color: var(--text-primary); margin-bottom: 8px; }
+  .greeting-sub { font-size: 16px; color: var(--text-muted); margin-bottom: 36px; }
+  
+  /* 电脑端默认：网格排列 */
+  .suggestions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .suggestion-card {
+    background: var(--surface); padding: 14px 16px; border-radius: 12px;
+    border: 1px solid var(--border); text-align: left; cursor: pointer;
+    font-size: 13.5px; color: var(--text-secondary); transition: all 0.15s;
+    line-height: 1.5; font-family: inherit; width: 100%;
+  }
+  .suggestion-card:hover { background: #ebebeb; border-color: #d0d0d0; }
+
+  /* Messages */
+  .message-wrapper { display: flex; gap: 14px; animation: slideUp 0.25s ease; }
+  .message-wrapper.user { flex-direction: row-reverse; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .avatar.bot { background: #111; }
+  .avatar.user-av { background: #4a4a4a; color: #fff; font-size: 11px; font-weight: 600; }
+  .message-content { max-width: 82%; font-size: 14.5px; line-height: 1.65; }
+  .message-wrapper.bot .message-content { color: var(--text-primary); padding-top: 4px; }
+  .message-wrapper.user .message-content {
+    background: var(--surface); padding: 12px 18px;
+    border-radius: 18px 4px 18px 18px; color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+  .error-text { color: #e53e3e; }
+
+  /* File attachment */
+  .file-preview { width: 100%; max-width: 760px; margin-bottom: 8px; }
+  .file-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #f0f0f0; border: 1px solid var(--border);
+    border-radius: var(--radius-full); padding: 5px 12px 5px 8px;
+    font-size: 12.5px; color: var(--text-secondary);
+  }
+  .file-chip-icon { width: 18px; height: 18px; background: #111; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .file-chip-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+  .file-chip-remove { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0; font-size: 15px; line-height: 1; }
+  .file-chip-remove:hover { color: #e53e3e; }
+
+  .uploading-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #f9f5e8; border: 1px solid #e8d8a0;
+    border-radius: var(--radius-full); padding: 5px 14px 5px 10px;
+    font-size: 12.5px; color: #7a6010;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { width: 13px; height: 13px; border: 2px solid #e8d8a0; border-top-color: #7a6010; border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+  .file-attachment-bubble {
+    display: flex; align-items: center; gap: 7px;
+    background: #f0f0f0; border-radius: 8px; padding: 7px 11px;
+    margin-bottom: 7px; font-size: 12.5px; color: var(--text-secondary);
+    border: 1px solid var(--border);
   }
 
-  .drop-zone {
-    border: 2px dashed #ddd; border-radius: 10px; padding: 36px;
-    text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 16px;
+  /* ── 4. 输入区域排版 ── */
+  .input-area {
+    flex-shrink: 0;
+    background: linear-gradient(to top, #fff 75%, transparent);
+    padding: 16px 24px 24px; display: flex; flex-direction: column; align-items: center;
   }
-  .drop-zone:hover, .drop-zone.dragover { border-color: #111; background: #f8f8f8; }
-  .drop-zone-icon { font-size: 32px; margin-bottom: 10px; }
-  .drop-zone-text { font-size: 14px; color: #666; }
-  .drop-zone-text strong { color: #111; }
-  .drop-zone-sub { font-size: 12px; color: #999; margin-top: 4px; }
-  .file-selected { font-size: 13px; color: #111; font-weight: 500; margin-top: 8px; }
+  .input-box-wrapper {
+    width: 100%; max-width: 760px; background: var(--surface);
+    border: 1px solid var(--border); 
+    border-radius: 14px; 
+    padding: 6px 6px 6px 14px; 
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .input-box-wrapper:focus-within { background: #fff; border-color: #bbb; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .input-box { flex: 1; border: none; background: transparent; outline: none; font-size: 14.5px; color: var(--text-primary); padding: 9px 0; font-family: inherit; }
+  .input-box::placeholder { color: var(--text-muted); }
 
   .upload-btn {
-    width: 100%; padding: 13px; background: #111; color: #fff;
-    border: none; border-radius: 10px; font-size: 14px; font-weight: 500;
-    cursor: pointer; font-family: inherit; transition: background 0.15s;
+    width: 34px; height: 34px; border-radius: 50%; background: transparent;
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); flex-shrink: 0; transition: all 0.15s;
   }
-  .upload-btn:hover { background: #333; }
-  .upload-btn:disabled { background: #aaa; cursor: not-allowed; }
+  .upload-btn:hover { background: #e8e8e8; color: var(--text-primary); }
+  .upload-btn.has-file { color: var(--text-primary); }
 
-  .progress-bar { height: 4px; background: #f0f0f0; border-radius: 4px; margin-top: 12px; overflow: hidden; display: none; }
-  .progress-fill { height: 100%; background: #111; border-radius: 4px; transition: width 0.3s; width: 0%; }
-
-  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
-  .alert.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-  .alert.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-
-  /* Stats */
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
-  .stat-card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; padding: 18px; }
-  .stat-num { font-size: 26px; font-weight: 600; }
-  .stat-label { font-size: 12px; color: #888; margin-top: 3px; }
-
-  /* Document list */
-  .docs-card { background: #fff; border: 1px solid #eaeaea; border-radius: 14px; overflow: hidden; }
-  .docs-header {
-    padding: 18px 24px; border-bottom: 1px solid #eaeaea;
-    display: flex; align-items: center; justify-content: space-between;
+  .send-btn {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--text-primary);
+    color: #fff; border: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: all 0.15s; flex-shrink: 0;
   }
-  .docs-header h3 { font-size: 15px; font-weight: 600; }
+  .send-btn:hover { background: #333; }
+  .send-btn:disabled { background: #ddd; color: #aaa; cursor: not-allowed; }
+  .send-btn.stop-mode { background: #e53e3e; }
+  .send-btn.stop-mode:hover { background: #c53030; }
+  .send-btn.stop-mode:disabled { background: #e53e3e; opacity: 0.6; }
 
-  .filter-row { display: flex; gap: 8px; }
-  .filter-btn {
-    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
-    border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-family: inherit;
-    transition: all 0.15s; color: #666;
-  }
-  .filter-btn.active, .filter-btn:hover { background: #111; color: #fff; border-color: #111; }
-
-  .doc-item {
-    display: flex; align-items: center; gap: 16px;
-    padding: 16px 24px; border-bottom: 1px solid #f5f5f5;
-    transition: background 0.1s;
-  }
-  .doc-item:last-child { border-bottom: none; }
-  .doc-item:hover { background: #fafafa; }
-
-  .doc-icon {
-    width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-  }
-  .doc-icon.pdf { background: #fef2f2; }
-  .doc-icon.docx { background: #eff6ff; }
-  .doc-icon.img { background: #f0fdf4; }
-  .doc-icon.other { background: #fafafa; }
-
-  .doc-info { flex: 1; min-width: 0; }
-  .doc-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .doc-meta { font-size: 12px; color: #888; margin-top: 2px; }
-
-  .doc-badge {
-    padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; flex-shrink: 0;
-  }
-  .badge-service { background: #fef3c7; color: #92400e; }
-  .badge-employee { background: #dbeafe; color: #1e40af; }
-  .badge-after { background: #dcfce7; color: #166534; }
-  .badge-warranty { background: #fce7f3; color: #9d174d; }
-  .badge-general { background: #f3f4f6; color: #374151; }
-
-  .doc-chunks { font-size: 11px; color: #aaa; flex-shrink: 0; }
-
-  .doc-actions { display: flex; gap: 8px; flex-shrink: 0; }
-  .btn-download {
-    padding: 6px 12px; background: #f4f4f4; border: none; border-radius: 6px;
-    font-size: 12px; cursor: pointer; font-family: inherit; color: #111; text-decoration: none;
-    display: inline-flex; align-items: center; gap: 4px; transition: background 0.15s;
-  }
-  .btn-download:hover { background: #e8e8e8; }
-  .btn-delete {
-    padding: 6px 10px; background: none; border: 1px solid #fecaca; border-radius: 6px;
-    font-size: 12px; cursor: pointer; color: #dc2626; font-family: inherit; transition: all 0.15s;
-  }
-  .btn-delete:hover { background: #fef2f2; }
-  .btn-chunks {
-    padding: 6px 10px; background: none; border: 1px solid #e0e0e0; border-radius: 6px;
-    font-size: 12px; cursor: pointer; color: #555; font-family: inherit; transition: all 0.15s;
-  }
-  .btn-chunks:hover { background: #f4f4f4; border-color: #111; color: #111; }
-
-  .empty-state { text-align: center; padding: 48px 24px; color: #888; }
-  .empty-icon { font-size: 40px; margin-bottom: 12px; }
-  .empty-text { font-size: 14px; }
-
-  .loading { text-align: center; padding: 32px; color: #888; font-size: 14px; }
-
-  /* Batch select */
-  .doc-checkbox { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; accent-color: #111; }
-  .bulk-bar {
-    display: none; align-items: center; gap: 12px;
-    padding: 10px 24px; background: #f8f8f8; border-bottom: 1px solid #eee;
-    font-size: 13px;
-  }
-  .bulk-bar.visible { display: flex; }
-  .bulk-count { color: #555; flex: 1; }
-  .btn-bulk-delete {
-    padding: 7px 14px; background: #dc2626; color: #fff; border: none;
-    border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
-    font-family: inherit; transition: background 0.15s;
-  }
-  .btn-bulk-delete:hover { background: #b91c1c; }
-  .btn-bulk-cancel {
-    padding: 7px 14px; background: none; border: 1px solid #ddd; color: #555;
-    border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
-  }
-  .btn-bulk-cancel:hover { background: #f4f4f4; }
-  .select-all-wrap {
+  .stream-status {
+    font-size: 12px; color: #999; margin-bottom: 4px;
     display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: #888; padding: 8px 24px 4px;
-    border-bottom: 1px solid #f0f0f0;
+  }
+  .stream-status .dots-loading { display: inline-block; width: 14px; text-align: left; }
+  .stream-status .dots-loading::after { content: ''; animation: dotsStep 1.4s steps(1, end) infinite; }
+  @keyframes dotsStep { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+  /* Drag-and-drop overlay */
+  .drop-overlay {
+    display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.92); z-index: 100;
+    align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+    border: 3px dashed #bbb; border-radius: 16px; margin: 12px; pointer-events: none;
+  }
+  .drop-overlay.active { display: flex; }
+  .drop-overlay-icon { font-size: 40px; }
+  .drop-overlay-text { font-size: 15px; color: #555; font-weight: 500; }
+  .disclaimer { font-size: 11.5px; color: var(--text-muted); margin-top: 10px; }
+
+  /* Typing */
+  .typing-indicator { display: flex; gap: 4px; padding: 6px 0; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: #bbb; animation: bounce 1.4s infinite ease-in-out both; }
+  .dot:nth-child(1) { animation-delay: -0.32s; }
+  .dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes bounce { 0%,80%,100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+  /* Tables */
+  .md-table-wrap { overflow-x: auto; margin: 10px 0; border-radius: 10px; border: 1px solid var(--border); }
+  .md-table { border-collapse: collapse; font-size: 13px; width: 100%; }
+  .md-table th { background: #f4f4f4; font-weight: 600; color: var(--text-primary); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .md-table td { padding: 9px 14px; border-bottom: 1px solid #f0f0f0; color: var(--text-secondary); }
+  .md-table tr:last-child td { border-bottom: none; }
+  .md-table tr:hover td { background: #fafafa; }
+  .md-table td:not(:first-child), .md-table th:not(:first-child) { text-align: right; }
+
+  .export-excel-btn {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    padding: 7px 14px; background: #111; color: #fff; border: none;
+    border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer;
+    transition: background 0.15s; font-family: inherit;
+  }
+  .export-excel-btn:hover { background: #333; }
+
+  /* Login */
+  #loginScreen { position: fixed; inset: 0; z-index: 1000; background: #fafafa; display: flex; align-items: center; justify-content: center; }
+  .login-card { background: #fff; border: 1px solid #eaeaea; border-radius: 16px; padding: 48px 40px; width: 100%; max-width: 380px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); animation: fadeIn 0.4s ease; display: flex; flex-direction: column; align-items: center; }
+  .login-logo-icon { width: 52px; height: 52px; background: #111; color: #fff; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+  .login-title { font-size: 24px; font-weight: 600; color: #111; letter-spacing: -0.5px; margin-bottom: 6px; text-align: center; }
+  .login-subtitle { font-size: 14px; color: #888; margin-bottom: 32px; text-align: center; }
+  .login-field { width: 100%; margin-bottom: 14px; }
+  .login-field input { width: 100%; padding: 13px 16px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 14.5px; color: #111; outline: none; transition: all 0.2s; background: #fafafa; font-family: inherit; }
+  .login-field input:focus { border-color: #111; background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+  .login-btn { width: 100%; padding: 14px; background: #111; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 6px; font-family: inherit; transition: background 0.2s; }
+  .login-btn:hover { background: #333; }
+  .login-btn:disabled { background: #aaa; cursor: not-allowed; }
+  .login-error { width: 100%; text-align: center; background: #fef2f2; color: #dc2626; padding: 11px; border-radius: 8px; font-size: 13px; margin-bottom: 18px; display: none; }
+  .login-footer { font-size: 11.5px; color: #bbb; text-align: center; margin-top: 20px; line-height: 1.6; }
+
+  /* Animations */
+  @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Mode toggle */
+  .mode-toggle-wrap { display: none; margin-top: 12px; padding: 12px; background: #f7f7f7; border: 1px solid var(--border); border-radius: 10px; }
+  .mode-toggle-wrap.visible { display: block; }
+  .mode-toggle-label { font-size: 11px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; display: block; }
+  .mode-toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .mode-toggle-text { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+  .mode-toggle-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+  .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: #ddd; border-radius: 22px; cursor: pointer; transition: background 0.2s; }
+  .toggle-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .toggle-switch input:checked + .toggle-slider { background: #111; }
+  .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); }
+
+  .doc-dl-btn {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 7px 14px;
+    background: #111; color: #fff; border: none; border-radius: 7px; font-size: 12.5px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.15s; letter-spacing: 0.01em;
+  }
+  .doc-dl-btn:hover { background: #333; }
+
+  /* ── Mobile menu (hamburger) ── */
+  .menu-btn {
+    display: none; width: 36px; height: 36px; border-radius: 8px;
+    background: transparent; border: none; cursor: pointer;
+    align-items: center; justify-content: center;
+    color: var(--text-primary); flex-shrink: 0; padding: 0;
+  }
+  .menu-btn:active { background: #f0f0f0; }
+
+  .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 90; opacity: 0; transition: opacity 0.2s; }
+  .sidebar-backdrop.visible { display: block; opacity: 1; }
+
+  /* ── Reminder Quick-Create Sheet (mobile only) ── */
+  .reminder-trigger {
+    display: none; /* shown only on mobile */
+    align-items: center; gap: 5px;
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; color: var(--text-muted); font-family: inherit;
+    padding: 2px 0; margin-bottom: 4px;
+  }
+  .reminder-trigger:active { color: var(--text-primary); }
+
+  .reminder-sheet-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 200;
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .reminder-sheet-backdrop.visible { display: block; opacity: 1; }
+
+  .reminder-sheet {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; z-index: 210;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
+    transform: translateY(105%); /* 多推5%确保完全不可见 */
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding: 0 20px calc(20px + env(safe-area-inset-bottom));
+    max-height: 85vh;
+    overflow: hidden; /* 防止内容撑宽 */
+    width: 100%;
+    box-sizing: border-box;
+    visibility: hidden; /* 关闭时完全不可见 */
+  }
+  .reminder-sheet.open { transform: translateY(0); visibility: visible; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+  .reminder-sheet-handle {
+    width: 36px; height: 4px; background: #d0d0d0; border-radius: 4px;
+    margin: 10px auto 16px;
+  }
+  .reminder-sheet-title {
+    font-size: 17px; font-weight: 600; color: var(--text-primary);
+    margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .reminder-sheet-close {
+    width: 28px; height: 28px; border-radius: 50%; background: #f0f0f0;
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: #888; font-size: 16px;
   }
 
-  /* Custom confirm dialog */
-  .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.25);
+  .rs-label {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+  }
+  .rs-input {
+    width: 100%; max-width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 16px; color: var(--text-primary);
+    background: #fafafa; outline: none; font-family: inherit;
+    margin-bottom: 16px; transition: border-color 0.2s;
+    box-sizing: border-box; -webkit-appearance: none;
+  }
+  .rs-input:focus { border-color: #111; background: #fff; }
+
+  .rs-datetime {
+    width: 100%; max-width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 16px; color: #111;
+    -webkit-text-fill-color: #111; opacity: 1;
+    background: #fafafa; outline: none; font-family: inherit;
+    margin-bottom: 16px; -webkit-appearance: none; box-sizing: border-box;
+  }
+  .rs-datetime:focus { border-color: #111; background: #fff; }
+
+  .rs-method-row {
+    display: flex; gap: 10px; margin-bottom: 20px;
+  }
+  .rs-method-btn {
+    flex: 1; padding: 11px 0; border: 1.5px solid var(--border);
+    border-radius: 12px; background: #fff; cursor: pointer;
+    font-size: 13.5px; font-weight: 500; color: var(--text-secondary);
+    font-family: inherit; transition: all 0.15s; text-align: center;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .rs-method-btn .rs-check {
+    width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #ccc;
     display: flex; align-items: center; justify-content: center;
-    z-index: 300; opacity: 0; pointer-events: none;
-    transition: opacity 0.15s;
+    transition: all 0.15s; flex-shrink: 0;
   }
-  .modal-overlay.open { opacity: 1; pointer-events: all; }
-  .modal {
-    background: #fff; border-radius: 14px; padding: 28px 28px 24px;
-    width: 380px; max-width: 90vw;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
-    transform: scale(0.96); transition: transform 0.15s;
+  .rs-method-btn.active { border-color: #111; }
+  .rs-method-btn.active .rs-check {
+    background: #111; border-color: #111;
   }
-  .modal-overlay.open .modal { transform: scale(1); }
-  .modal-icon { font-size: 28px; margin-bottom: 12px; }
-  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-  .modal-body { font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 22px; }
-  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-  .modal-cancel {
-    padding: 9px 18px; background: #f4f4f4; border: none; border-radius: 8px;
-    font-size: 13px; cursor: pointer; font-family: inherit; color: #333;
-  }
-  .modal-cancel:hover { background: #e8e8e8; }
-  .modal-confirm {
-    padding: 9px 18px; background: #dc2626; color: #fff; border: none;
-    border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
-    font-family: inherit; transition: background 0.15s;
-  }
-  .modal-confirm:hover { background: #b91c1c; }
-  .modal-confirm.loading-btn { background: #aaa; cursor: not-allowed; }
 
-  /* Batch upload queue */
-  .batch-queue { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-  .queue-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; background: #fafafa; border: 1px solid #eee;
-    border-radius: 8px; font-size: 13px;
+  .rs-create-btn {
+    width: 100%; padding: 14px; background: #111; color: #fff;
+    border: none; border-radius: 14px; font-size: 15px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.15s;
+    margin-top: 4px;
   }
-  .queue-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #111; }
-  .queue-item-status { font-size: 12px; flex-shrink: 0; font-weight: 500; }
-  .status-pending { color: #999; }
-  .status-uploading { color: #0b57d0; }
-  .status-done { color: #16a34a; }
-  .status-error { color: #dc2626; }
-  .queue-item-remove { background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; padding: 0; flex-shrink: 0; }
-  .queue-item-remove:hover { color: #dc2626; }
+  .rs-create-btn:hover { background: #333; }
+  .rs-create-btn:disabled { background: #ccc; cursor: not-allowed; }
 
-  /* Login overlay */
-  #loginOverlay {
-    position: fixed; inset: 0; background: #fafafa;
-    display: flex; align-items: center; justify-content: center; z-index: 100;
+  /* Check Reminder Sheet */
+  .cr-sheet { 
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; z-index: 210;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
+    transform: translateY(105%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding: 0 20px calc(20px + env(safe-area-inset-bottom));
+    max-height: 85vh; width: 100%; box-sizing: border-box;
+    visibility: hidden; overflow: hidden;
   }
-  .login-box {
-    background: #fff; border: 1px solid #eaeaea; border-radius: 14px;
-    padding: 40px; width: 340px; text-align: center;
-  }
-  .login-box h2 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
-  .login-box p { font-size: 13px; color: #888; margin-bottom: 24px; }
-  .login-box input {
-    width: 100%; padding: 11px 14px; border: 1px solid #e0e0e0; border-radius: 8px;
-    font-size: 14px; font-family: inherit; outline: none; margin-bottom: 12px;
-  }
-  .login-box input:focus { border-color: #111; }
-  .login-box button {
-    width: 100%; padding: 12px; background: #111; color: #fff; border: none;
-    border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;
-  }
-  .login-err { color: #dc2626; font-size: 13px; margin-top: 8px; display: none; }
+  .cr-sheet.open { transform: translateY(0); visibility: visible; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-  /* Chunk drawer */
-  .drawer-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200;
-    display: none; align-items: stretch; justify-content: flex-end;
+  .cr-item {
+    border: 1px solid #eee; border-radius: 12px; padding: 14px;
+    margin-bottom: 12px; transition: all 0.15s;
   }
-  .drawer-overlay.open { display: flex; }
-  .drawer {
-    width: 600px; max-width: 95vw; background: #fff;
-    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+  .cr-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .cr-item-content { font-size: 15px; font-weight: 500; color: #111; flex: 1; word-break: break-word; }
+  .cr-item-time { font-size: 13px; color: #888; margin-top: 4px; }
+  .cr-item-channels { display: flex; gap: 6px; margin-top: 6px; }
+  .cr-item-ch { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .cr-ch-email { background: #dbeafe; color: #1d4ed8; }
+  .cr-ch-call { background: #dcfce7; color: #166534; }
+  .cr-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .cr-btn-edit, .cr-btn-del {
+    padding: 6px 12px; border-radius: 8px; font-size: 12px;
+    font-weight: 500; cursor: pointer; border: 1px solid; font-family: inherit;
   }
-  .drawer-header {
-    padding: 20px 24px; border-bottom: 1px solid #eee;
-    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
-  }
-  .drawer-title { font-size: 15px; font-weight: 600; }
-  .drawer-sub { font-size: 12px; color: #888; margin-top: 2px; }
-  .drawer-close {
-    width: 32px; height: 32px; border: none; background: #f4f4f4;
-    border-radius: 8px; cursor: pointer; font-size: 16px; display: flex;
-    align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .drawer-close:hover { background: #e8e8e8; }
-  .drawer-body { flex: 1; overflow-y: auto; padding: 16px 24px; }
-  .chunk-item {
-    padding: 14px 16px; background: #fafafa; border: 1px solid #eee;
-    border-radius: 10px; margin-bottom: 10px;
-  }
-  .chunk-meta {
-    font-size: 11px; color: #aaa; margin-bottom: 8px;
-    display: flex; gap: 12px; align-items: center;
-  }
-  .chunk-num { font-weight: 600; color: #555; font-size: 12px; }
-  .chunk-text { font-size: 13px; line-height: 1.65; color: #333; white-space: pre-wrap; word-break: break-word; }
-  .drawer-loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+  .cr-btn-edit { background: #fff; color: #111; border-color: #ddd; }
+  .cr-btn-edit:hover { background: #f5f5f5; }
+  .cr-btn-del { background: #fff; color: #dc2626; border-color: #fecaca; }
+  .cr-btn-del:hover { background: #fef2f2; }
 
-  /* Search test */
-  .search-card {
-    background: #fff; border: 1px solid #eaeaea; border-radius: 14px;
-    padding: 24px; margin-top: 28px; margin-bottom: 32px;
+  /* Edit mode */
+  .cr-edit-form { margin-top: 10px; display: none; }
+  .cr-edit-form.active { display: block; }
+  .cr-edit-input {
+    width: 100%; max-width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0;
+    border-radius: 10px; font-size: 16px; font-family: inherit;
+    margin-bottom: 8px; box-sizing: border-box; outline: none;
+    -webkit-appearance: none; appearance: none;
+    color: #111; -webkit-text-fill-color: #111; opacity: 1;
   }
-  .search-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-  .search-card p { font-size: 13px; color: #888; margin-bottom: 16px; }
-  .search-row { display: flex; gap: 10px; }
-  .search-input {
-    flex: 1; padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 8px;
-    font-size: 14px; font-family: inherit; outline: none;
+  .cr-edit-input:focus { border-color: #111; }
+  .cr-edit-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .cr-edit-ch {
+    flex: 1; padding: 8px; border: 1.5px solid #ddd; border-radius: 10px;
+    text-align: center; cursor: pointer; font-size: 13px; font-family: inherit;
+    background: #fff; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
   }
-  .search-input:focus { border-color: #111; }
-  .search-btn {
-    padding: 10px 20px; background: #111; color: #fff; border: none;
-    border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  .cr-edit-ch.active { border-color: #111; }
+  .cr-edit-ch .cr-chk { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid #ccc; display: flex; align-items: center; justify-content: center; }
+  .cr-edit-ch.active .cr-chk { background: #111; border-color: #111; }
+  .cr-edit-save {
+    width: 100%; padding: 10px; background: #111; color: #fff;
+    border: none; border-radius: 10px; font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
   }
-  .search-btn:hover { background: #333; }
-  .search-results { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-  .search-result-item {
-    padding: 14px 16px; background: #fafafa; border: 1px solid #eee; border-radius: 10px;
-  }
-  .search-result-meta {
-    display: flex; gap: 10px; align-items: center;
-    font-size: 11px; color: #888; margin-bottom: 8px; flex-wrap: wrap;
-  }
-  .score-badge { padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 11px; }
-  .score-high { background: #dcfce7; color: #166534; }
-  .score-mid  { background: #fef9c3; color: #854d0e; }
-  .score-low  { background: #f3f4f6; color: #6b7280; }
-  .search-result-text {
-    font-size: 13px; line-height: 1.65; color: #333; white-space: pre-wrap; word-break: break-word;
-    max-height: 120px; overflow: hidden;
-  }
-  .search-result-text.expanded { max-height: none; }
-  .expand-btn { font-size: 12px; color: #0b57d0; cursor: pointer; background: none; border: none; padding: 4px 0; font-family: inherit; margin-top: 4px; }
+  .cr-empty { text-align: center; padding: 30px 0; color: #aaa; font-size: 14px; }
 
-  /* Reminders section */
-  .reminder-card {
-    background: #fff; border: 1px solid #eaeaea; border-radius: 14px;
-    overflow: hidden; margin-bottom: 28px;
+  .rs-who-wrap { display: none; margin-bottom: 20px; } /* hidden until admin opens sheet */
+  .rs-who-wrap.visible { display: block; }
+  .rs-who-select {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 15px; color: var(--text-primary);
+    background: #fafafa; outline: none; font-family: inherit;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    box-sizing: border-box; max-width: 100%;
   }
-  .reminder-header {
-    padding: 18px 24px; border-bottom: 1px solid #eaeaea;
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+
+  /* ── Mobile breakpoint ── */
+  @media (max-width: 768px), (pointer: coarse) and (max-width: 1024px) {
+    html, body { height: var(--app-height); position: fixed; inset: 0; touch-action: none; }
+    .menu-btn { display: flex; }
+
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0; width: 84vw; max-width: 320px; z-index: 100;
+      transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 2px 0 16px rgba(0,0,0,0.08);
+      padding-top: calc(16px + env(safe-area-inset-top)); padding-left: calc(10px + env(safe-area-inset-left)); padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    .header { padding: 0 16px; padding-top: env(safe-area-inset-top); height: calc(56px + env(safe-area-inset-top)); border-bottom: none; position: relative; }
+    /* Mobile header: 居中标题，隐藏桌面元素 */
+    .header-title { display: none; }
+    .header-center {
+      display: block; position: absolute; left: 50%; transform: translateX(-50%);
+      font-size: 16px; font-weight: 600; color: var(--text-primary); pointer-events: none;
+    }
+    .user-name, .role-badge, .logout-btn, .online-dot { display: none !important; }
+    .header-right { gap: 0; }
+    .desktop-only { display: none !important; }
+    
+    .chat-container { padding: 16px 14px 16px; }
+    .chat-content { max-width: 100%; }
+    #messageList { gap: 22px; }
+
+    .greeting-title { font-size: 28px; margin-bottom: 6px; }
+    .greeting-sub { font-size: 14px; color: #888; margin-bottom: 24px; }
+    .empty-state { padding-top: 6vh; }
+    
+    /* 核心修改：仅在手机端启用竖排 + 胶囊样式 */
+    .suggestions-grid { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: flex-start; /* 靠左对齐，宽度自适应 */
+      gap: 10px; 
+    }
+    .suggestion-card { 
+      width: fit-content; 
+      border-radius: 100px; /* 变成彻底的胶囊形 */
+      padding: 10px 18px; 
+      font-size: 13.5px; 
+    }
+
+    .message-content { max-width: 88%; font-size: 15px; }
+    .message-wrapper.user .message-content { padding: 10px 14px; }
+
+    .input-area {
+      position: relative; flex-shrink: 0;
+      background: var(--bg); border-top: none;
+      padding: 8px 12px calc(8px + var(--safe-bottom)); 
+    }
+    .input-box-wrapper { border-radius: 24px; padding: 5px 5px 5px 14px; }
+    .input-box { font-size: 16px; /* prevent iOS auto-zoom on focus */ }
+    .disclaimer { display: none; }
+    .reminder-trigger { display: flex; }
+
+    .login-card { padding: 36px 26px; margin: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+    .login-title { font-size: 22px; }
+    .login-field input { font-size: 16px; }
+
+    .md-table th, .md-table td { padding: 8px 10px; font-size: 12.5px; }
   }
-  .reminder-header h3 { font-size: 15px; font-weight: 600; margin: 0; }
-  .reminder-controls { display: flex; gap: 10px; align-items: center; }
-  .reminder-toggle { font-size: 13px; display: flex; align-items: center; gap: 6px; color: #555; cursor: pointer; }
-  .reminder-toggle input { cursor: pointer; }
-  .reminder-filter {
-    padding: 7px 12px; border: 1px solid #e0e0e0; border-radius: 8px;
-    font-size: 13px; font-family: inherit; outline: none; background: #fafafa;
+
+  @media (min-width: 769px) and (pointer: fine) {
+    .menu-btn, .sidebar-backdrop { display: none !important; }
+    .sidebar-footer { display: none; }
+    .header-center { display: none; }
+    .mobile-only { display: none !important; }
   }
-  .reminder-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .reminder-table th {
-    text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.04em; color: #888;
-    background: #fafafa; border-bottom: 1px solid #eee; white-space: nowrap;
-  }
-  .reminder-table td {
-    padding: 12px 14px; border-bottom: 1px solid #f4f4f4;
-    vertical-align: top; line-height: 1.5;
-  }
-  .reminder-table tr:hover td { background: #fafafa; }
-  .r-id { font-weight: 600; color: #555; font-size: 12px; }
-  .r-user { font-weight: 500; }
-  .r-content { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .r-channel-badge {
-    display: inline-block; padding: 2px 8px; border-radius: 12px;
-    font-size: 11px; font-weight: 500; margin-right: 4px;
-  }
-  .r-ch-email { background: #dbeafe; color: #1d4ed8; }
-  .r-ch-call { background: #dcfce7; color: #166534; }
-  .r-status-pending { color: #ca8a04; font-weight: 500; }
-  .r-status-fired { color: #16a34a; font-weight: 500; }
-  .r-status-error { color: #dc2626; font-weight: 500; }
-  .r-contact { font-size: 12px; color: #666; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .r-delete-btn {
-    padding: 5px 12px; background: #fff; color: #dc2626; border: 1px solid #fecaca;
-    border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
-    transition: all 0.15s;
-  }
-  .r-delete-btn:hover { background: #fef2f2; border-color: #dc2626; }
-  .r-empty { text-align: center; padding: 40px 20px; color: #aaa; font-size: 14px; }
-  .r-stats { display: flex; gap: 14px; padding: 14px 24px; border-bottom: 1px solid #eee; }
-  .r-stat { font-size: 13px; color: #555; }
-  .r-stat strong { font-weight: 600; color: #111; }
 </style>
 </head>
 <body>
 
-<!-- Login Overlay -->
-<div id="loginOverlay">
-  <div class="login-box">
-    <div style="width:44px;height:44px;background:#111;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-    </div>
-    <h2>Chumart Library</h2>
-    <p>Enter admin key to access</p>
-    <input type="password" id="adminKeyInput" placeholder="Admin key" onkeydown="if(event.key==='Enter')checkAdminKey()">
-    <button onclick="checkAdminKey()">Enter</button>
-    <div class="login-err" id="loginErr">Invalid admin key</div>
-  </div>
-</div>
-
-<div class="header">
-  <div class="header-title">
-    <div class="header-logo">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-    </div>
-    Chumart Library
-  </div>
-  <div style="display:flex;align-items:center;gap:16px">
-    <button onclick="toggleReminders()" id="reminderToggleBtn" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
-      ⏰ <span id="reminderBtnLabel">Reminders</span> <span id="reminderBadge" style="background:#ca8a04;color:#fff;padding:1px 7px;border-radius:10px;font-size:11px;display:none">0</span>
-    </button>
-    <button onclick="togglePOReminders()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
-      📦 PO Reminders
-    </button>
-    <button onclick="toggleCaptureReminders()" style="padding:8px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
-      💳 Capture Reminders
-    </button>
-    <button onclick="toggleCommissionReports()" style="padding:8px 16px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
-      📊 Commission Reports
-    </button>
-    <a href="/" class="back-btn">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-      Back to Chat
-    </a>
-  </div>
-</div>
-
-<!-- Scheduled Messages Panel (hidden by default) -->
-<div id="poReminderPanel" style="display:none">
-  <div class="container" style="padding-bottom:0;padding-left:32px;padding-right:32px">
-    <div class="reminder-card">
-      <div class="reminder-header">
-        <h3>📦 Scheduled Messages</h3>
-      </div>
-      <div style="margin:16px 0;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-        <div class="form-group" style="min-width:70px;width:70px">
-          <label>HOUR</label>
-          <select id="poNewHour" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <option value="">--</option>
-            <option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option>
-            <option value="9">9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option>
-            <option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option>
-            <option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option>
-            <option value="18">6 PM</option><option value="19">7 PM</option><option value="20">8 PM</option>
-            <option value="21">9 PM</option><option value="22">10 PM</option><option value="23">11 PM</option>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:60px;width:60px">
-          <label>MIN</label>
-          <select id="poNewMin" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <script>document.write(Array.from({length:60},(_,i)=>`<option value="${String(i).padStart(2,'0')}">:${String(i).padStart(2,'0')}</option>`).join(''))</script>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:110px">
-          <label>FREQUENCY</label>
-          <select id="poNewFreq" onchange="toggleOneTimeDate()" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <option value="weekday">Weekday (Mon-Fri)</option>
-            <option value="everyday">Everyday</option>
-            <option value="onetime">One Time</option>
-          </select>
-        </div>
-        <div class="form-group" id="poDateGroup" style="min-width:130px;display:none">
-          <label>DATE</label>
-          <input type="date" id="poNewDate" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-        </div>
-        <div class="form-group" style="min-width:140px">
-          <label>SEND TO</label>
-          <select id="poNewTarget" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <option value="ALL">All Internal Users</option>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:180px;flex:1">
-          <label>MESSAGE</label>
-          <input type="text" id="poNewMessage" placeholder="e.g. Please confirm today's PO orders" style="padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-        </div>
-        <div class="form-group" style="min-width:140px">
-          <label>ATTACH PO LIST</label>
-          <select id="poNewOnlyPayment" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <option value="none">No</option>
-            <option value="payment">Payment-triggered POs</option>
-            <option value="all_draft">All draft POs</option>
-          </select>
-        </div>
-        <button onclick="addPOReminder()" style="padding:8px 14px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
-        <button onclick="testPOReminder()" style="padding:8px 14px;background:#ca8a04;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test</button>
-      </div>
-      <div id="poReminderList" style="margin-top:12px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Capture Reminders Panel (hidden by default) -->
-<div id="captureReminderPanel" style="display:none">
-  <div class="container" style="padding-bottom:0;padding-left:32px;padding-right:32px">
-    <div class="reminder-card">
-      <div class="reminder-header">
-        <h3>💳 Stripe Capture Reminders</h3>
-      </div>
-      <p style="font-size:13px;color:#888;margin:8px 0 4px">
-        Reminds you of Stripe payments that are authorized but not yet captured (authorizations expire after 7 days). Sent as CHUMART AI to each recipient's Discuss DM.
-      </p>
-      <div style="margin:16px 0;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-        <div class="form-group" style="min-width:70px;width:70px">
-          <label>HOUR</label>
-          <select id="capNewHour" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <option value="">--</option>
-            <option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option>
-            <option value="9" selected>9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option>
-            <option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option>
-            <option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option>
-            <option value="18">6 PM</option><option value="19">7 PM</option><option value="20">8 PM</option>
-            <option value="21">9 PM</option><option value="22">10 PM</option><option value="23">11 PM</option>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:60px;width:60px">
-          <label>MIN</label>
-          <select id="capNewMin" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <script>document.write(Array.from({length:60},(_,i)=>`<option value="${String(i).padStart(2,'0')}"${i===30?' selected':''}>:${String(i).padStart(2,'0')}</option>`).join(''))</script>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:110px">
-          <label>FREQUENCY</label>
-          <select id="capNewFreq" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <option value="everyday">Everyday</option>
-            <option value="weekday">Weekday (Mon-Fri)</option>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:200px;flex:1">
-          <label>RECIPIENTS (select internal users)</label>
-          <div id="capNewRecipients" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;min-height:38px"><span style="color:#aaa;font-size:13px">Loading…</span></div>
-        </div>
-        <button onclick="addCaptureReminder()" style="padding:8px 14px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
-        <button onclick="testCaptureReminder()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test</button>
-        <button onclick="previewCaptureReminder()" style="padding:8px 14px;background:#ca8a04;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">👁 Preview</button>
-      </div>
-      <div id="capReminderList" style="margin-top:12px"></div>
-      <div id="capPreviewBox" style="margin-top:12px;display:none;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;white-space:pre-wrap;font-size:13px;font-family:ui-monospace,monospace"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Commission Reports Panel (hidden by default) -->
-<div id="commissionReportPanel" style="display:none">
-  <div class="container" style="padding-bottom:0;padding-left:32px;padding-right:32px">
-    <div class="reminder-card">
-      <div class="reminder-header">
-        <h3>📊 Monthly Commission Reports</h3>
-      </div>
-      <p style="font-size:13px;color:#888;margin:8px 0 4px">
-        Automatically sends last month's sales commission summary (Commission Base, Table B) + full Excel every month. Sent as CHUMART AI to each recipient's Discuss DM, and by email (Excel attached).
-      </p>
-      <div style="margin:16px 0;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-        <div class="form-group" style="min-width:90px;width:90px">
-          <label>DAY (of month)</label>
-          <select id="commNewDay" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <script>document.write(Array.from({length:28},(_,i)=>`<option value="${i+1}"${i===0?' selected':''}>Day ${i+1}</option>`).join(''))</script>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:70px;width:70px">
-          <label>HOUR</label>
-          <select id="commNewHour" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option>
-            <option value="9" selected>9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option>
-            <option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option>
-            <option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option>
-            <option value="18">6 PM</option><option value="19">7 PM</option><option value="20">8 PM</option>
-            <option value="21">9 PM</option><option value="22">10 PM</option><option value="23">11 PM</option>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:60px;width:60px">
-          <label>MIN</label>
-          <select id="commNewMin" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
-            <script>document.write(Array.from({length:60},(_,i)=>`<option value="${String(i).padStart(2,'0')}"${i===0?' selected':''}>:${String(i).padStart(2,'0')}</option>`).join(''))</script>
-          </select>
-        </div>
-        <div class="form-group" style="min-width:200px;flex:1">
-          <label>RECIPIENTS (select internal users)</label>
-          <div id="commNewRecipients" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;min-height:38px"><span style="color:#aaa;font-size:13px">Loading…</span></div>
-        </div>
-        <button onclick="addCommissionReport()" style="padding:8px 14px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
-        <button onclick="testCommissionReport()" style="padding:8px 14px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test (last month)</button>
-      </div>
-      <div id="commReportList" style="margin-top:12px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Reminders Panel (hidden by default, toggled by header button) -->
-<div id="reminderPanel" style="display:none">
-  <div class="container" style="padding-bottom:0">
-    <div class="reminder-card" id="reminderSection">
-      <div class="reminder-header">
-        <h3>⏰ All Reminders</h3>
-        <div class="reminder-controls">
-          <select class="reminder-filter" id="reminderUserFilter" onchange="renderReminders()">
-            <option value="all">All Users</option>
-          </select>
-          <label class="reminder-toggle">
-            <input type="checkbox" id="reminderShowFired" onchange="loadReminders()">
-            Show fired
-          </label>
-        </div>
-      </div>
-      <div class="r-stats" id="reminderStats"></div>
-      <div id="reminderList"><div class="r-empty">Loading reminders…</div></div>
-    </div>
-  </div>
-</div>
-
-<div class="container">
-  <div class="page-title">Knowledge Base Documents</div>
-  <div class="page-sub">Upload manuals, handbooks, and procedures. AI will learn from them and answer questions based on the content.</div>
-
-  <!-- Search Test (moved up) -->
-  <div class="search-card" style="margin-top:0;margin-bottom:28px">
-    <h3>Search Test</h3>
-    <p>Enter a question to see which knowledge base chunks are matched. Useful for debugging indexing.</p>
-    <div class="search-row">
-      <input type="text" class="search-input" id="searchInput"
-        placeholder="e.g. How to clean the evaporator coil?"
-        onkeydown="if(event.key==='Enter')runSearch()">
-      <select id="searchLimit" style="padding:10px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fafafa;">
-        <option value="5">Top 5</option>
-        <option value="10">Top 10</option>
-        <option value="20">Top 20</option>
-      </select>
-      <button class="search-btn" onclick="runSearch()">Search</button>
-    </div>
-    <div id="searchResults"></div>
+<div class="sidebar" id="sidebar">
+  <button class="new-chat-btn" onclick="newChat()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    New Chat
+  </button>
+  <div id="modelSelectorWrap" style="display:none;margin-top:16px">
+    <div style="font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:0.06em;padding:0 8px;margin-bottom:6px">Model</div>
+    <select id="modelSelect" onchange="onModelChange(this.value)"
+      style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--text-primary);background:var(--bg);font-family:inherit;outline:none;cursor:pointer;appearance:none;background-image:url(&#34;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E&#34;);background-repeat:no-repeat;background-position:right 10px center">
+      <optgroup label="── Claude ──">
+        <option value="claude-sonnet-4-5" selected>Claude Sonnet 4.5 (default)</option>
+        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 · Fast</option>
+        <option value="claude-opus-4-5">Claude Opus 4.5</option>
+      </optgroup>
+      <optgroup label="── OpenAI GPT-5 (Latest) ──">
+        <option value="gpt-5.4">GPT-5.4 · Flagship</option>
+        <option value="gpt-5.4-mini">GPT-5.4 Mini · Fast</option>
+        <option value="gpt-5.4-nano">GPT-5.4 Nano · Fastest</option>
+      </optgroup>
+      <optgroup label="── OpenAI GPT-4 ──">
+        <option value="gpt-4o">GPT-4o</option>
+        <option value="gpt-4o-mini">GPT-4o Mini</option>
+      </optgroup>
+    </select>
   </div>
 
-  <!-- Stats -->
-  <div class="stats-row" id="statsRow">
-    <div class="stat-card"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Total Documents</div></div>
-    <div class="stat-card"><div class="stat-num" id="statChunks">—</div><div class="stat-label">Knowledge Chunks</div></div>
-    <div class="stat-card"><div class="stat-num" id="statManuals">—</div><div class="stat-label">Service Manuals</div></div>
-    <div class="stat-card"><div class="stat-num" id="statSize">—</div><div class="stat-label">Total Size</div></div>
-  </div>
-
-  <!-- Upload -->
-  <div class="upload-card">
-    <h3>Upload Document</h3>
-    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
-      ondragover="event.preventDefault();this.classList.add('dragover')"
-      ondragleave="this.classList.remove('dragover')"
-      ondrop="handleDrop(event)">
-      <div class="drop-zone-icon">📂</div>
-      <div class="drop-zone-text"><strong>Click to upload</strong> or drag and drop</div>
-      <div class="drop-zone-sub">PDF, Word, images, TXT · Multiple files supported</div>
-      <div class="file-selected" id="fileSelected"></div>
-    </div>
-    <input type="file" id="fileInput" style="display:none" accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg,.webp" multiple onchange="onFileSelect(this)">
-
-    <div class="form-row">
-      <div class="form-group">
-        <label>Category</label>
-        <select id="categorySelect">
-          <option value="service_manual">🔧 Service Manual</option>
-          <option value="product_manual">📘 Product Manual</option>
-          <option value="spec_sheet">📊 Spec Sheet</option>
-          <option value="employee_handbook">👥 Employee Handbook</option>
-          <option value="after_sales">🛠 After-Sales / Warranty Claims</option>
-          <option value="warranty">📋 Warranty Documents</option>
-          <option value="general">📄 General</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Description (optional)</label>
-        <input type="text" id="descInput" placeholder="e.g. PLM-54RS Refrigerator Service Manual">
-      </div>
-    </div>
-
-    <button class="upload-btn" id="uploadBtn" onclick="uploadDoc()">Upload & Index Document</button>
-    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="alert" id="uploadAlert"></div>
-  </div>
-
-  <!-- Document List -->
-  <div class="docs-card">
-    <div class="docs-header">
-      <h3>All Documents</h3>
-      <div class="filter-row">
-        <button class="filter-btn active" onclick="filterDocs('all', this)">All</button>
-        <button class="filter-btn" onclick="filterDocs('service_manual', this)">🔧 Service</button>
-        <button class="filter-btn" onclick="filterDocs('product_manual', this)">📘 Product</button>
-        <button class="filter-btn" onclick="filterDocs('spec_sheet', this)">📊 Spec</button>
-        <button class="filter-btn" onclick="filterDocs('employee_handbook', this)">👥 Handbook</button>
-        <button class="filter-btn" onclick="filterDocs('after_sales', this)">🛠 After-Sales</button>
-        <button class="filter-btn" onclick="filterDocs('warranty', this)">📋 Warranty</button>
-        <button class="filter-btn" onclick="filterDocs('general', this)">📄 General</button>
-      </div>
-    </div>
-    <!-- Bulk action bar — shown when ≥1 doc is selected -->
-    <div class="bulk-bar" id="bulkBar">
-      <span class="bulk-count" id="bulkCount">0 selected</span>
-      <button class="btn-bulk-cancel" onclick="clearSelection()">Cancel</button>
-      <button class="btn-bulk-delete" onclick="bulkDelete()">Delete selected</button>
-    </div>
-    <!-- Select-all row — shown only when docs are rendered -->
-    <div class="select-all-wrap" id="selectAllWrap" style="display:none">
-      <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this.checked)">
-      <label for="selectAllChk" style="cursor:pointer">Select all</label>
-    </div>
-    <div id="docList"><div class="loading">Loading documents…</div></div>
-    <div id="docPagination" style="display:none;padding:16px 24px;border-top:1px solid #eee;display:flex;align-items:center;justify-content:center;gap:12px">
-      <button onclick="changePage(-1)" id="prevPageBtn" style="padding:8px 16px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;font-family:inherit">← Previous</button>
-      <span id="pageInfo" style="font-size:13px;color:#666"></span>
-      <button onclick="changePage(1)" id="nextPageBtn" style="padding:8px 16px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;font-family:inherit">Next →</button>
-    </div>
-  </div>
-</div>
-
-<!-- Custom confirm / alert modal -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
-    <div class="modal-icon" id="modalIcon">🗑️</div>
-    <div class="modal-title" id="modalTitle">Confirm delete</div>
-    <div class="modal-body" id="modalBody"></div>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-      <button class="modal-confirm" id="modalConfirm">Delete</button>
-    </div>
-  </div>
-</div>
-
-<!-- Chunk Drawer -->
-<div class="drawer-overlay" id="chunkDrawer" onclick="if(event.target===this)closeChunks()">
-  <div class="drawer">
-    <div class="drawer-header">
+  <div id="modeSelectorWrap" class="mode-toggle-wrap">
+    <span class="mode-toggle-label">Mode</span>
+    <div class="mode-toggle-row">
       <div>
-        <div class="drawer-title" id="drawerTitle">Document Chunks</div>
-        <div class="drawer-sub" id="drawerSub"></div>
+        <div class="mode-toggle-text" id="modeLabel">Work Mode</div>
+        <div class="mode-toggle-sub" id="modeSub">Enterprise assistant</div>
       </div>
-      <button class="drawer-close" onclick="closeChunks()">✕</button>
+      <label class="toggle-switch">
+        <input type="checkbox" id="freeModeToggle" onchange="onFreeModeChange(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
     </div>
-    <div class="drawer-body" id="drawerBody">
-      <div class="drawer-loading">Loading chunks…</div>
+  </div>
+
+  <div id="historyList" class="history-list" style="margin-top:12px"></div>
+  
+  <div class="sidebar-footer">
+    <button class="logout-btn-sidebar" onclick="doLogout()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </button>
+  </div>
+</div>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<div class="main-content">
+  <div class="header">
+    <div class="header-left">
+      <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Open menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="header-title" style="font-size:15px;font-weight:600;color:var(--text-primary)">Chumart AI</div>
     </div>
+    
+    <div class="header-center">Chumart AI</div>
+    
+    <div class="header-right" id="userBadge">
+      <span class="online-dot" style="width:7px;height:7px;background:#22c55e;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+      <div class="user-avatar" id="userAvatar">?</div>
+      <span class="user-name" id="userName"></span>
+      <span class="role-badge" id="roleBadge"></span>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="chat-container" id="messagesContainer">
+    <div class="drop-overlay" id="dropOverlay">
+      <div class="drop-overlay-icon">📎</div>
+      <div class="drop-overlay-text">Drop file here to upload</div>
+    </div>
+    <div class="chat-content">
+      <div class="empty-state" id="emptyState">
+        <div class="greeting-title" id="greetingTitle">Hello, Chumart 👋</div>
+        <div class="greeting-sub">How can I help you today?</div>
+        <div class="suggestions-grid">
+          <button class="suggestion-card desktop-only" onclick="quickSend('Show me recent sales orders')">📊 Recent sales orders</button>
+          <button class="suggestion-card" onclick="quickSend('Check inventory for 54rs')">📦 Check 54rs inventory</button>
+          <button class="suggestion-card" onclick="loadShipmentETA()">🚢 Incoming shipments</button>
+          <button class="suggestion-card desktop-only" onclick="quickSend('Find contact info for a specific customer')">👥 Find customer</button>
+          <button class="suggestion-card" onclick="quickSend('How do I maintain this equipment daily?')">🔧 Product training</button>
+          <button class="suggestion-card" onclick="loadTrainingManual()">📖 Training Manual</button>
+          <button class="suggestion-card mobile-only" onclick="checkReminder()">📋 Check reminder</button>
+          <button class="suggestion-card mobile-only" onclick="startReminder()">⏰ Set Reminder</button>
+        </div>
+      </div>
+      <div id="messageList"></div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div id="filePreviewBar" class="file-preview" style="display:none;"></div>
+    <button class="reminder-trigger" onclick="openReminderSheet()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Set Reminder
+    </button>
+    <div class="input-box-wrapper">
+      <input type="file" id="fileInput" accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls" style="display:none" onchange="handleFileSelect(event)">
+      <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()" title="Attach file">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <input class="input-box" id="inputBox" placeholder="Ask a question..." autocomplete="off"
+        onkeydown="handleKey(event)" onpaste="handlePaste(event)">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    <div class="disclaimer">Chumart AI · Real-time Odoo data · Paste screenshots with Ctrl+V</div>
+  </div>
+</div>
+
+<!-- Reminder Quick-Create Sheet -->
+<div class="reminder-sheet-backdrop" id="rsBackdrop" onclick="closeReminderSheet()"></div>
+<div class="reminder-sheet" id="reminderSheet">
+  <div class="reminder-sheet-handle"></div>
+  <div class="reminder-sheet-title">
+    <span>⏰ Set Reminder</span>
+    <button class="reminder-sheet-close" onclick="closeReminderSheet()">✕</button>
+  </div>
+  <div class="rs-label">Content</div>
+  <input class="rs-input" id="rsContent" placeholder="What to remind?" autocomplete="off">
+  <div class="rs-label">Time</div>
+  <input class="rs-datetime" id="rsTime" type="datetime-local">
+  <div class="rs-label">Method <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#bbb">(Optional)</span></div>
+  <div class="rs-method-row">
+    <button class="rs-method-btn active" id="rsEmail" onclick="toggleMethod('rsEmail')">
+      <span class="rs-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+      📧 Email
+    </button>
+    <button class="rs-method-btn active" id="rsCall" onclick="toggleMethod('rsCall')">
+      <span class="rs-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+      📞 Call
+    </button>
+  </div>
+  <div class="rs-who-wrap" id="rsWhoWrap">
+    <div class="rs-label">Remind who? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#bbb">(Optional)</span></div>
+    <select class="rs-who-select" id="rsWho">
+      <option value="">Myself</option>
+    </select>
+  </div>
+  <button class="rs-create-btn" id="rsCreateBtn" onclick="createReminderFromSheet()">Create Reminder</button>
+</div>
+
+<!-- Check Reminder Sheet -->
+<div class="reminder-sheet-backdrop" id="crBackdrop" onclick="closeCheckSheet()"></div>
+<div class="cr-sheet" id="checkSheet">
+  <div class="reminder-sheet-handle"></div>
+  <div class="reminder-sheet-title">
+    <span>📋 My Reminders</span>
+    <button class="reminder-sheet-close" onclick="closeCheckSheet()">✕</button>
+  </div>
+  <div id="crList"><div class="cr-empty">Loading...</div></div>
+</div>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      </svg>
+    </div>
+    <div class="login-title">Chumart AI</div>
+    <div class="login-subtitle">Sign in with your Odoo account</div>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-field">
+      <input type="text" id="loginUser" placeholder="Email / Username" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    </div>
+    <div class="login-field">
+      <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div class="login-footer">Your credentials are verified directly against Odoo.<br>They are never stored by this application.</div>
   </div>
 </div>
 
 <script>
   const BACKEND = 'https://chumart-ai.up.railway.app';
-  let adminKey = '';
-  let allDocs = [];
-  let currentFilter = 'all';
-  let fileQueue = [];
-  let selectedIds = new Set(); // for batch delete
-  let docPage = 1;
-  const DOC_PAGE_SIZE = 20;
 
-  // ── Login: persist key in sessionStorage so refresh doesn't log out ──
-  // sessionStorage survives page refresh but clears when tab is closed.
-  function checkAdminKey() {
-    const key = document.getElementById('adminKeyInput').value;
-    if (!key) return;
-    adminKey = key;
-    loadDocs().then(ok => {
-      if (ok) {
-        sessionStorage.setItem('lib_admin_key', adminKey);
-        document.getElementById('loginOverlay').style.display = 'none';
-        loadReminders();
-      } else {
-        document.getElementById('loginErr').style.display = 'block';
-        adminKey = '';
-      }
-    });
-  }
-
-  // On page load: try to restore key from sessionStorage
-  (function restoreSession() {
-    const saved = sessionStorage.getItem('lib_admin_key');
-    if (!saved) return;
-    adminKey = saved;
-    loadDocs().then(ok => {
-      if (ok) {
-        document.getElementById('loginOverlay').style.display = 'none';
-        loadReminders();
-      } else {
-        adminKey = '';
-        sessionStorage.removeItem('lib_admin_key');
-      }
-    });
-  })();
-
-  async function loadDocs() {
-    try {
-      const res = await fetch(`${BACKEND}/admin/documents?admin_key=${adminKey}`);
-      const data = await res.json();
-      if (data.error) return false;
-      allDocs = data.documents || [];
-      renderStats();
-      renderDocs();
-      return true;
-    } catch(e) {
-      return false;
-    }
-  }
-
-  function renderStats() {
-    document.getElementById('statTotal').textContent = allDocs.length;
-    const totalChunks = allDocs.reduce((s, d) => s + (d.chunk_count || 0), 0);
-    document.getElementById('statChunks').textContent = totalChunks.toLocaleString();
-    const manuals = allDocs.filter(d => d.category === 'service_manual').length;
-    document.getElementById('statManuals').textContent = manuals;
-    const totalSize = allDocs.reduce((s, d) => s + (d.file_size || 0), 0);
-    document.getElementById('statSize').textContent = formatSize(totalSize);
-  }
-
-  function formatSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-    return (bytes/1024/1024).toFixed(1) + ' MB';
-  }
-
-  function getDocIcon(name) {
-    const ext = name.split('.').pop().toLowerCase();
-    if (ext === 'pdf') return { cls: 'pdf', emoji: '📄' };
-    if (['docx','doc'].includes(ext)) return { cls: 'docx', emoji: '📝' };
-    if (['png','jpg','jpeg','webp'].includes(ext)) return { cls: 'img', emoji: '🖼' };
-    return { cls: 'other', emoji: '📁' };
-  }
-
-  function getBadge(cat) {
-    const map = {
-      service_manual: { cls: 'badge-service', label: '🔧 Service Manual' },
-      product_manual: { cls: 'badge-service', label: '📘 Product Manual' },
-      spec_sheet: { cls: 'badge-service', label: '📊 Spec Sheet' },
-      employee_handbook: { cls: 'badge-employee', label: '👥 Handbook' },
-      after_sales: { cls: 'badge-after', label: '🛠 After-Sales' },
-      warranty: { cls: 'badge-warranty', label: '📋 Warranty' },
-      general: { cls: 'badge-general', label: '📄 General' },
-    };
-    return map[cat] || map['general'];
-  }
-
-  function renderDocs() {
-    const list = document.getElementById('docList');
-    const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.category === currentFilter);
-
-    document.getElementById('selectAllWrap').style.display = filtered.length ? 'flex' : 'none';
-    document.getElementById('selectAllChk').checked = false;
-
-    if (!filtered.length) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No documents yet. Upload your first document above.</div></div>`;
-      document.getElementById('docPagination').style.display = 'none';
-      return;
-    }
-
-    // Pagination
-    const totalPages = Math.ceil(filtered.length / DOC_PAGE_SIZE);
-    if (docPage > totalPages) docPage = totalPages;
-    if (docPage < 1) docPage = 1;
-    const start = (docPage - 1) * DOC_PAGE_SIZE;
-    const pageItems = filtered.slice(start, start + DOC_PAGE_SIZE);
-
-    list.innerHTML = pageItems.map(doc => {
-      const icon = getDocIcon(doc.original_name);
-      const badge = getBadge(doc.category);
-      const date = new Date(doc.created_at).toLocaleDateString();
-      const checked = selectedIds.has(String(doc.id)) ? 'checked' : '';
-      const zeroChunks = doc.chunk_count === 0 ? ' style="color:#dc2626;font-weight:600"' : '';
-      return `<div class="doc-item" id="doc_${doc.id}">
-        <input type="checkbox" class="doc-checkbox" ${checked}
-          onchange="toggleSelect('${doc.id}', this.checked)">
-        <div class="doc-icon ${icon.cls}">${icon.emoji}</div>
-        <div class="doc-info">
-          <div class="doc-name">${esc(doc.original_name)}</div>
-          <div class="doc-meta">${doc.description || ''} · ${formatSize(doc.file_size)} · ${date}</div>
-        </div>
-        <span class="doc-badge ${badge.cls}">${badge.label}</span>
-        <div class="doc-actions">
-          <button class="btn-chunks" onclick="openChunks('${doc.id}', '${esc(doc.original_name)}', ${doc.chunk_count})">
-            ${doc.chunk_count} chunks
-          </button>
-          <a href="${doc.public_url}" target="_blank" class="btn-download">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download
-          </a>
-          <button class="btn-delete" onclick="deleteDoc('${doc.id}', '${esc(doc.original_name)}')">Delete</button>
-        </div>
-      </div>`;
-    }).join('');
-
-    // Pagination controls
-    const pagDiv = document.getElementById('docPagination');
-    if (totalPages > 1) {
-      pagDiv.style.display = 'flex';
-      document.getElementById('prevPageBtn').disabled = docPage <= 1;
-      document.getElementById('nextPageBtn').disabled = docPage >= totalPages;
-      document.getElementById('prevPageBtn').style.opacity = docPage <= 1 ? '0.4' : '1';
-      document.getElementById('nextPageBtn').style.opacity = docPage >= totalPages ? '0.4' : '1';
-      document.getElementById('pageInfo').textContent = `Page ${docPage} of ${totalPages} (${filtered.length} docs)`;
+  // ── iOS PWA 终极键盘接管逻辑 ──
+  const vv = window.visualViewport;
+  
+  function updateAppHeight() {
+    if (!vv) return;
+    document.documentElement.style.setProperty('--app-height', `${vv.height}px`);
+    
+    if (vv.height < window.screen.height - 150) {
+      document.documentElement.style.setProperty('--safe-bottom', '0px');
     } else {
-      pagDiv.style.display = 'none';
+      document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom)');
     }
-  }
-
-  function changePage(delta) {
-    docPage += delta;
-    renderDocs();
-    // Scroll to doc list
-    document.getElementById('docList').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function filterDocs(cat, btn) {
-    currentFilter = cat;
-    docPage = 1;  // reset to page 1 on filter change
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderDocs();
-  }
-
-  function onFileSelect(input) {
-    const files = Array.from(input.files);
-    addFilesToQueue(files);
-    input.value = '';
-  }
-
-  function addFilesToQueue(files) {
-    files.forEach(file => {
-      fileQueue.push({ file, id: Date.now() + Math.random() });
-    });
-    renderQueue();
-  }
-
-  function removeFromQueue(id) {
-    fileQueue = fileQueue.filter(q => q.id !== id);
-    renderQueue();
-  }
-
-  function renderQueue() {
-    const sel = document.getElementById('fileSelected');
-    if (!fileQueue.length) { sel.innerHTML = ''; return; }
-    sel.innerHTML = `<div class="batch-queue">${fileQueue.map(q =>
-      `<div class="queue-item" id="qi_${q.id}">
-        <span style="font-size:16px">${getFileEmoji(q.file.name)}</span>
-        <span class="queue-item-name">${esc(q.file.name)}</span>
-        <span class="queue-item-status status-pending" id="qs_${q.id}">${formatSize(q.file.size)}</span>
-        <button class="queue-item-remove" onclick="removeFromQueue(${q.id})">✕</button>
-      </div>`
-    ).join('')}</div>`;
-  }
-
-  function getFileEmoji(name) {
-    const ext = name.split('.').pop().toLowerCase();
-    if (ext === 'pdf') return '📄';
-    if (['docx','doc'].includes(ext)) return '📝';
-    if (['png','jpg','jpeg','webp'].includes(ext)) return '🖼';
-    return '📁';
-  }
-
-  function handleDrop(e) {
-    e.preventDefault();
-    document.getElementById('dropZone').classList.remove('dragover');
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length) addFilesToQueue(files);
-  }
-
-  async function uploadDoc() {
-    if (!fileQueue.length) { showAlert('Please select at least one file.', 'error'); return; }
-    const category = document.getElementById('categorySelect').value;
-    const description = document.getElementById('descInput').value;
-    const btn = document.getElementById('uploadBtn');
-    btn.disabled = true;
-
-    const bar = document.getElementById('progressBar');
-    const fill = document.getElementById('progressFill');
-    bar.style.display = 'block';
-
-    const total = fileQueue.length;
-    let done = 0, errors = 0;
-    const snapshot = [...fileQueue];
-
-    for (const item of snapshot) {
-      // Update status
-      const statusEl = document.getElementById(`qs_${item.id}`);
-      if (statusEl) { statusEl.textContent = 'Uploading…'; statusEl.className = 'queue-item-status status-uploading'; }
-      btn.textContent = `Uploading ${done + 1} / ${total}…`;
-      fill.style.width = `${Math.round(((done) / total) * 100)}%`;
-
-      try {
-        const fd = new FormData();
-        fd.append('file', item.file);
-        const uploadUrl = `${BACKEND}/admin/upload-doc?admin_key=${encodeURIComponent(adminKey)}&category=${encodeURIComponent(category)}&description=${encodeURIComponent(description || item.file.name.replace(/\.[^.]+$/, ''))}`;
-        const res = await fetch(uploadUrl, { method: 'POST', body: fd });
-        const data = await res.json();
-        if (data.error) {
-          if (statusEl) { statusEl.textContent = '✗ ' + data.error; statusEl.className = 'queue-item-status status-error'; }
-          errors++;
-        } else {
-          if (statusEl) { statusEl.textContent = '✓ Done'; statusEl.className = 'queue-item-status status-done'; }
-          // Remove from queue after success
-          fileQueue = fileQueue.filter(q => q.id !== item.id);
-        }
-      } catch(e) {
-        if (statusEl) { statusEl.textContent = '✗ Failed'; statusEl.className = 'queue-item-status status-error'; }
-        errors++;
+    
+    window.scrollTo(0, 0);
+    
+    // Reminder sheets: 键盘弹起时整体上移，不被遮挡
+    ['reminderSheet', 'checkSheet'].forEach(sid => {
+      const s = document.getElementById(sid);
+      if (s && s.classList.contains('open')) {
+        const kbH = window.innerHeight - vv.height - (vv.offsetTop || 0);
+        if (kbH > 50) { s.style.bottom = kbH + 'px'; s.style.maxHeight = (vv.height - 20) + 'px'; }
+        else { s.style.bottom = '0'; s.style.maxHeight = '85vh'; }
       }
-      done++;
-    }
-
-    fill.style.width = '100%';
-    const succeeded = done - errors;
-    if (errors === 0) {
-      showAlert(`✓ ${succeeded} file${succeeded > 1 ? 's' : ''} uploaded! Indexing in background (~1 min per file).`, 'success');
-      document.getElementById('fileSelected').innerHTML = '';
-      document.getElementById('descInput').value = '';
-    } else {
-      showAlert(`${succeeded} uploaded, ${errors} failed. Check errors above.`, errors === done ? 'error' : 'success');
-    }
-
-    btn.disabled = false;
-    btn.textContent = 'Upload & Index Document';
-    setTimeout(() => { bar.style.display = 'none'; fill.style.width = '0%'; }, 2000);
-    setTimeout(() => loadDocs(), 4000);
-  }
-
-  // ── Custom modal ──────────────────────────────────────────────
-  let modalResolve = null;
-
-  function showModal(title, body, icon = '🗑️') {
-    return new Promise(resolve => {
-      modalResolve = resolve;
-      document.getElementById('modalIcon').textContent = icon;
-      document.getElementById('modalTitle').textContent = title;
-      document.getElementById('modalBody').innerHTML = body;
-      const btn = document.getElementById('modalConfirm');
-      btn.textContent = 'Delete';
-      btn.className = 'modal-confirm';
-      btn.onclick = () => {
-        // Clear modalResolve BEFORE closeModal so closeModal doesn't resolve(false)
-        modalResolve = null;
-        document.getElementById('modalOverlay').classList.remove('open');
-        resolve(true);
-      };
-      document.getElementById('modalOverlay').classList.add('open');
     });
   }
 
-  function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('open');
-    if (modalResolve) { modalResolve(false); modalResolve = null; }
+  if (vv) {
+    vv.addEventListener('resize', updateAppHeight);
+    vv.addEventListener('scroll', updateAppHeight);
+    updateAppHeight();
   }
 
-  // Close on overlay click
-  document.getElementById('modalOverlay').addEventListener('click', e => {
-    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  // ── 焦点处理: 等待键盘动画结束后滚动到底部 ──
+  document.addEventListener('focusin', (e) => {
+    if (e.target && e.target.id === 'inputBox') {
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        const c = document.getElementById('messagesContainer');
+        if (c) c.scrollTop = c.scrollHeight;
+      }, 300);
+    }
+    // Check/Set Reminder sheet inputs: scroll into view after keyboard opens
+    if (e.target && (e.target.closest('.cr-sheet') || e.target.closest('.reminder-sheet'))) {
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 350);
+    }
   });
 
-  // ── Single delete ──────────────────────────────────────────────
-  async function deleteDoc(id, name) {
-    const ok = await showModal(
-      'Delete document?',
-      `<strong>${esc(name)}</strong><br><br>This will remove the file and all its knowledge base chunks. This cannot be undone.`
-    );
-    if (!ok) return;
-    try {
-      const url = `${BACKEND}/admin/documents/${id}?admin_key=${encodeURIComponent(adminKey)}`;
-      console.log(`[DELETE] id=${id} url=${url}`);
-      const res = await fetch(url, { method: 'DELETE' });
-      const data = await res.json();
-      console.log(`[DELETE] id=${id} status=${res.status} response=`, data);
-      if (data.error) { showModal('Delete failed', esc(data.error), '⚠️'); return; }
-      selectedIds.delete(String(id));
-      updateBulkBar();
-      await loadDocs();
-    } catch(e) {
-      showModal('Delete failed', esc(e.message), '⚠️');
+  document.addEventListener('focusout', (e) => {
+    if (e.target && e.target.id === 'inputBox') {
+      window.scrollTo(0, 0);
+    }
+  });
+
+  // ── Mobile sidebar drawer ──
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarBackdrop').classList.add('visible');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarBackdrop').classList.remove('visible');
+  }
+  function toggleSidebar() {
+    const sb = document.getElementById('sidebar');
+    if (sb.classList.contains('open')) closeSidebar(); else openSidebar();
+  }
+  function maybeCloseSidebarOnMobile() {
+    const isMobile = window.matchMedia('(max-width: 768px), (pointer: coarse) and (max-width: 1024px)').matches;
+    if (isMobile) closeSidebar();
+  }
+
+  window.addEventListener('appinstalled', () => { console.log('[PWA] Installed'); });
+
+  let allSessions = [], currentSessionId = null, history = [], busy = false;
+  let attachedFile = null, isUploading = false;
+  let currentUser = null;
+  let selectedModel = 'claude-haiku-4-5-20251001';
+  let freeMode = false;
+  let currentAbortController = null;
+
+  function onModelChange(val) { selectedModel = val; }
+  function onFreeModeChange(checked) {
+    freeMode = checked;
+    document.getElementById('modeLabel').textContent = checked ? '🎲 Free Mode' : 'Work Mode';
+    document.getElementById('modeSub').textContent = checked ? 'Anything goes' : 'Enterprise assistant';
+  }
+
+  const input    = document.getElementById('inputBox');
+  const sendBtn  = document.getElementById('sendBtn');
+  const msgList  = document.getElementById('messageList');
+  const msgCont  = document.getElementById('messagesContainer');
+  const emptyEl  = document.getElementById('emptyState');
+  const histEl   = document.getElementById('historyList');
+  const filePrev = document.getElementById('filePreviewBar');
+  const uploadBtn= document.getElementById('uploadBtn');
+
+  // 检测手机端
+  const IS_MOBILE = (window.innerWidth < 768) || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const userStore = IS_MOBILE ? localStorage : sessionStorage;
+
+  window.addEventListener('load', () => {
+    let user = userStore.getItem('chumart_user');
+    if (!user && IS_MOBILE) {
+      user = sessionStorage.getItem('chumart_user');
+      if (user) { localStorage.setItem('chumart_user', user); sessionStorage.removeItem('chumart_user'); }
+    }
+    if (user) { currentUser = JSON.parse(user); showApp(); }
+  });
+
+  function newChat() {
+    currentSessionId = Date.now().toString();
+    history = [];
+    msgList.innerHTML = '';
+    emptyEl.style.display = 'flex';
+    clearAttachment();
+    renderSidebar();
+    maybeCloseSidebarOnMobile();
+  }
+
+  function loadSession(id) {
+    currentSessionId = id;
+    const s = allSessions.find(x => x.id === id);
+    history = s ? s.history : [];
+    msgList.innerHTML = '';
+    emptyEl.style.display = history.length ? 'none' : 'flex';
+    history.forEach(m => {
+      if (m.role === 'user') renderUserMsgDOM(m.content, m.fileName, m.imagePreview);
+      else renderBotMsgDOM(m.content, false);
+    });
+    clearAttachment();
+    renderSidebar();
+    scrollBottom();
+    maybeCloseSidebarOnMobile();
+  }
+
+  function saveSession(firstMsg = '') {
+    let s = allSessions.find(x => x.id === currentSessionId);
+    if (!s) {
+      s = { id: currentSessionId, title: firstMsg.substring(0, 18) || 'New Chat', history: [] };
+      allSessions.unshift(s);
+    }
+    s.history = history;
+    localStorage.setItem('chumartChats', JSON.stringify(allSessions));
+    renderSidebar();
+    if (currentUser?.uid) {
+      fetch(`${BACKEND}/sessions/${currentSessionId}`, { method: 'DELETE' }).catch(()=>{});
     }
   }
 
-  // ── Batch select ───────────────────────────────────────────────
-  function toggleSelect(id, checked) {
-    const sid = String(id);
-    if (checked) selectedIds.add(sid);
-    else selectedIds.delete(sid);
-    updateBulkBar();
-    // Sync select-all checkbox
-    const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.category === currentFilter);
-    document.getElementById('selectAllChk').checked =
-      filtered.length > 0 && filtered.every(d => selectedIds.has(String(d.id)));
+  function deleteSession(id) {
+    allSessions = allSessions.filter(s => s.id !== id);
+    localStorage.setItem('chumartChats', JSON.stringify(allSessions));
+    if (currentUser?.uid) fetch(`${BACKEND}/sessions/${id}?uid=${currentUser.uid}`, { method: 'DELETE' }).catch(()=>{});
+    if (currentSessionId === id) allSessions.length ? loadSession(allSessions[0].id) : newChat(); else renderSidebar();
   }
 
-  function toggleSelectAll(checked) {
-    const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.category === currentFilter);
-    filtered.forEach(d => {
-      if (checked) selectedIds.add(String(d.id));
-      else selectedIds.delete(String(d.id));
+  function renderSidebar() {
+    histEl.innerHTML = '';
+    if (!allSessions.length) return;
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+    const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+    const groups = { 'Today': [], 'Yesterday': [], 'This Week': [], 'Earlier': [] };
+
+    allSessions.forEach(s => {
+      let d;
+      if (s.updated_at) d = new Date(s.updated_at);
+      else if (typeof s.id === 'string' && /^\d{13}$/.test(s.id)) d = new Date(parseInt(s.id));
+      else d = new Date(0);
+
+      if (d.toDateString() === todayStr) groups['Today'].push(s);
+      else if (d.toDateString() === yesterdayStr) groups['Yesterday'].push(s);
+      else if (d > weekAgo) groups['This Week'].push(s);
+      else groups['Earlier'].push(s);
     });
-    renderDocs();
-    updateBulkBar();
+
+    for (const [label, sessions] of Object.entries(groups)) {
+      if (!sessions.length) continue;
+      const groupLabel = document.createElement('div');
+      groupLabel.className = 'history-group-label';
+      groupLabel.textContent = label;
+      histEl.appendChild(groupLabel);
+
+      sessions.forEach(s => {
+        const d = document.createElement('div');
+        d.className = 'history-item' + (s.id === currentSessionId ? ' active' : '');
+        const span = document.createElement('span');
+        span.textContent = s.title;
+        span.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0';
+        const del = document.createElement('button');
+        del.className = 'trash-btn'; del.textContent = '✕';
+        del.onclick = e => { e.stopPropagation(); deleteSession(s.id); };
+        d.appendChild(span); d.appendChild(del);
+        d.onclick = () => loadSession(s.id);
+        histEl.appendChild(d);
+      });
+    }
   }
 
-  function clearSelection() {
-    selectedIds.clear();
-    renderDocs();
-    updateBulkBar();
+  input.addEventListener('input', () => { if (busy) return; sendBtn.disabled = !input.value.trim() || isUploading; });
+  function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+  function quickSend(t) { input.value = t; sendMessage(); }
+
+  async function loadShipmentETA() {
+    if (busy) return;
+    busy = true;
+    hideEmpty();
+
+    // Show user "message"
+    const userRow = document.createElement('div');
+    userRow.className = 'message-wrapper user';
+    userRow.innerHTML = `<div class="message-content"><div class="user-bubble">🚢 Incoming shipments</div></div>`;
+    msgList.appendChild(userRow);
+
+    // Show bot loading
+    const botRow = document.createElement('div');
+    botRow.className = 'message-wrapper bot';
+    const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
+    botRow.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content"><div class="stream-content"><div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div>`;
+    msgList.appendChild(botRow);
+    const contentEl = botRow.querySelector('.stream-content');
+    scrollBottom();
+
+    try {
+      const res = await fetch(BACKEND + '/report/shipment-eta');
+      const data = await res.json();
+      if (data.error) { contentEl.innerHTML = `<span class="error-text">Error: ${escHtml(data.error)}</span>`; return; }
+      if (!data.items || data.items.length === 0) {
+        contentEl.innerHTML = '<p>📭 No incoming shipments found (all arrived or none tracked).</p>';
+        return;
+      }
+      // Group by ETA for cleaner display
+      let html = `<p><strong>🚢 Incoming Shipments</strong> — ${data.total} items in transit (as of ${escHtml(data.as_of)})</p>`;
+      html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px">';
+      html += '<thead><tr style="border-bottom:2px solid #ddd;text-align:left">'
+            + '<th style="padding:6px 8px">SKU</th>'
+            + '<th style="padding:6px 8px">Product</th>'
+            + '<th style="padding:6px 8px;text-align:right">Qty</th>'
+            + '<th style="padding:6px 8px">ETA</th>'
+            + '<th style="padding:6px 8px">Shipment</th>'
+            + '<th style="padding:6px 8px">Status</th>'
+            + '</tr></thead><tbody>';
+      const statusLabels = { draft: '📝 Draft', shipped: '🚀 Shipped', in_transit: '🚢 In Transit', arrived: '✅ Arrived' };
+      for (const item of data.items) {
+        const eta = item.eta || '—';
+        const today = data.as_of;
+        // Highlight if arriving within 7 days
+        let etaStyle = '';
+        if (item.eta) {
+          const diff = (new Date(item.eta) - new Date(today)) / 86400000;
+          if (diff <= 7) etaStyle = 'color:#d97706;font-weight:600';
+          if (diff <= 3) etaStyle = 'color:#dc2626;font-weight:600';
+        }
+        html += `<tr style="border-bottom:1px solid #eee">`
+              + `<td style="padding:5px 8px;font-family:monospace;font-weight:600">${escHtml(item.sku)}</td>`
+              + `<td style="padding:5px 8px">${escHtml(item.product_name)}</td>`
+              + `<td style="padding:5px 8px;text-align:right">${item.qty}</td>`
+              + `<td style="padding:5px 8px;${etaStyle}">${escHtml(eta)}</td>`
+              + `<td style="padding:5px 8px;font-size:12px">${escHtml(item.shipment || '—')}</td>`
+              + `<td style="padding:5px 8px">${statusLabels[item.status] || escHtml(item.status)}</td>`
+              + `</tr>`;
+      }
+      html += '</tbody></table></div>';
+      contentEl.innerHTML = html;
+    } catch (e) {
+      contentEl.innerHTML = `<span class="error-text">Failed to load: ${escHtml(e.message)}</span>`;
+    } finally {
+      busy = false; setSendButtonMode('send');
+      scrollBottom();
+    }
+  }
+  function loadTrainingManual() {
+    window.open(BACKEND + '/training-manual/download', '_blank');
+  }
+  function startReminder() {
+    openReminderSheet();
+  }
+  function checkReminder() {
+    openCheckSheet();
   }
 
-  function updateBulkBar() {
-    const bar = document.getElementById('bulkBar');
-    const count = selectedIds.size;
-    if (count > 0) {
-      bar.classList.add('visible');
-      document.getElementById('bulkCount').textContent = `${count} selected`;
+  // ── Check Reminder Sheet ──
+  let crData = []; // cache
+
+  async function openCheckSheet() {
+    // Fetch data FIRST, then open sheet (no Loading flash)
+    try {
+      const res = await fetch(`${BACKEND}/api/my-reminders?session_token=${encodeURIComponent(currentUser?.session_token || '')}`);
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      crData = data.reminders || [];
+    } catch(e) { alert('Error: ' + e.message); return; }
+    
+    // Now open with content ready
+    if (!crData.length) {
+      document.getElementById('crList').innerHTML = '<div class="cr-empty">No pending reminders</div>';
     } else {
-      bar.classList.remove('visible');
+      renderCheckList(crData);
     }
+    document.getElementById('crBackdrop').classList.add('visible');
+    document.getElementById('checkSheet').classList.add('open');
   }
 
-  // ── Batch delete ───────────────────────────────────────────────
-  async function bulkDelete() {
-    const count = selectedIds.size;
-    if (!count) return;
-    const names = allDocs.filter(d => selectedIds.has(String(d.id))).map(d => d.original_name);
-    const preview = names.slice(0, 5).map(n => `• ${esc(n)}`).join('<br>');
-    const more = names.length > 5 ? `<br><em>…and ${names.length - 5} more</em>` : '';
-
-    const ok = await showModal(
-      `Delete ${count} document${count > 1 ? 's' : ''}?`,
-      `${preview}${more}<br><br>All knowledge base chunks will be removed. This cannot be undone.`
-    );
-    if (!ok) return;
-
-    // Show progress in bulk bar while deleting (don't reopen the modal)
-    const countEl = document.getElementById('bulkCount');
-    const ids = [...selectedIds];
-    let done = 0, failed = 0;
-
-    for (const id of ids) {
-      countEl.textContent = `Deleting ${done + 1} / ${ids.length}…`;
-      try {
-        const url = `${BACKEND}/admin/documents/${id}?admin_key=${encodeURIComponent(adminKey)}`;
-        console.log(`[BULK DELETE] ${done+1}/${ids.length} id=${id} url=${url}`);
-        const res = await fetch(url, { method: 'DELETE' });
-        const data = await res.json();
-        console.log(`[BULK DELETE] id=${id} status=${res.status} response=`, data);
-        if (data.error) { console.error(`[BULK DELETE] FAILED id=${id}: ${data.error}`); failed++; }
-        else { selectedIds.delete(String(id)); }
-      } catch(e) { console.error(`[BULK DELETE] EXCEPTION id=${id}:`, e); failed++; }
-      done++;
-    }
-
-    updateBulkBar();
-    await loadDocs();
-
-    if (failed > 0) {
-      showModal('Partial failure', `${ids.length - failed} deleted, ${failed} failed.`, '⚠️');
-    }
+  function closeCheckSheet() {
+    document.getElementById('crBackdrop').classList.remove('visible');
+    const sheet = document.getElementById('checkSheet');
+    sheet.classList.remove('open');
+    sheet.style.bottom = '0';
+    sheet.style.maxHeight = '85vh';
   }
 
-  function showAlert(msg, type) {
-    const el = document.getElementById('uploadAlert');
-    el.textContent = msg;
-    el.className = `alert ${type}`;
-    el.style.display = 'block';
-    if (type === 'success') setTimeout(() => el.style.display = 'none', 8000);
-  }
-
-  // ── Chunk Drawer ──────────────────────────────────────────────
-  async function openChunks(docId, docName, chunkCount) {
-    document.getElementById('drawerTitle').textContent = docName;
-    document.getElementById('drawerSub').textContent = `${chunkCount} chunks · doc:${docId}`;
-    document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Loading chunks…</div>';
-    document.getElementById('chunkDrawer').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    try {
-      const res = await fetch(`${BACKEND}/admin/documents/${docId}/chunks?admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error) { document.getElementById('drawerBody').innerHTML = `<div class="drawer-loading" style="color:#dc2626">Error: ${esc(data.error)}</div>`; return; }
-      if (!data.chunks || !data.chunks.length) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">No chunks found for this document.</div>'; return; }
-      document.getElementById('drawerBody').innerHTML = data.chunks.map(c => `
-        <div class="chunk-item">
-          <div class="chunk-meta">
-            <span class="chunk-num">#${c.index}</span>
-            <span>${c.char_count} chars</span>
-            ${c.category ? `<span>${esc(c.category)}</span>` : ''}
-          </div>
-          <div class="chunk-text">${esc(c.text)}</div>
-        </div>`).join('');
-    } catch(e) {
-      document.getElementById('drawerBody').innerHTML = `<div class="drawer-loading" style="color:#dc2626">Failed: ${esc(e.message)}</div>`;
-    }
-  }
-
-  function closeChunks() {
-    document.getElementById('chunkDrawer').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  // ── Search Test ───────────────────────────────────────────────
-  async function runSearch() {
-    const q = document.getElementById('searchInput').value.trim();
-    if (!q) return;
-    const limit = document.getElementById('searchLimit').value;
-    const container = document.getElementById('searchResults');
-    container.innerHTML = '<div style="font-size:13px;color:#aaa;padding:12px 0">Searching…</div>';
-    try {
-      const res = await fetch(`${BACKEND}/admin/kb-search?q=${encodeURIComponent(q)}&limit=${limit}&admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error) { container.innerHTML = `<div style="font-size:13px;color:#dc2626;padding:12px 0">Error: ${esc(data.error)}</div>`; return; }
-      if (!data.results || !data.results.length) { container.innerHTML = '<div style="font-size:13px;color:#aaa;padding:12px 0">No results found.</div>'; return; }
-      container.innerHTML = `
-        <div style="font-size:12px;color:#888;padding:8px 0 4px">Found ${data.results.length} results for "<strong>${esc(q)}</strong>"</div>
-        <div class="search-results">
-          ${data.results.map((r, i) => {
-            const pct = Math.round(r.score * 100);
-            const cls = pct >= 75 ? 'score-high' : pct >= 50 ? 'score-mid' : 'score-low';
-            const tid = `srt_${i}`;
-            return `<div class="search-result-item">
-              <div class="search-result-meta">
-                <span class="score-badge ${cls}">${pct}% match</span>
-                <span>${esc(r.site_name || '')}</span>
-                ${r.category ? `<span>${esc(r.category)}</span>` : ''}
-                ${r.doc_id ? `<button class="expand-btn" style="margin-left:auto" onclick="openChunks('${r.doc_id}','${esc(r.site_name||r.doc_id)}',0)">View all chunks →</button>` : ''}
-              </div>
-              <div class="search-result-text" id="${tid}">${esc(r.text)}</div>
-              <button class="expand-btn" onclick="const el=document.getElementById('${tid}');el.classList.toggle('expanded');this.textContent=el.classList.contains('expanded')?'Show less':'Show more'">Show more</button>
-            </div>`;
-          }).join('')}
-        </div>`;
-    } catch(e) {
-      container.innerHTML = `<div style="font-size:13px;color:#dc2626;padding:12px 0">Failed: ${esc(e.message)}</div>`;
-    }
-  }
-
-  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-  // ── Reminders Management ──────────────────────────────────────
-  let allReminders = [];
-
-  function toggleReminders() {
-    const panel = document.getElementById('reminderPanel');
-    const isHidden = panel.style.display === 'none';
-    panel.style.display = isHidden ? 'block' : 'none';
-    if (isHidden) {
-      loadReminders();
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-
-  async function loadReminders() {
-    const fired = document.getElementById('reminderShowFired').checked;
-    try {
-      const res = await fetch(`${BACKEND}/admin/reminders?admin_key=${encodeURIComponent(adminKey)}&include_fired=${fired}`);
-      const data = await res.json();
-      if (data.error) { document.getElementById('reminderList').innerHTML = `<div class="r-empty" style="color:#dc2626">Error: ${esc(data.error)}</div>`; return; }
-      allReminders = data.reminders || [];
-      // Update header badge
-      const pending = allReminders.filter(r => !r.fired).length;
-      const badge = document.getElementById('reminderBadge');
-      if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline'; }
-      else { badge.style.display = 'none'; }
-      updateReminderFilter();
-      renderReminders();
-    } catch(e) {
-      document.getElementById('reminderList').innerHTML = `<div class="r-empty" style="color:#dc2626">Failed to load: ${esc(e.message)}</div>`;
-    }
-  }
-
-  function updateReminderFilter() {
-    const sel = document.getElementById('reminderUserFilter');
-    const currentVal = sel.value;
-    const users = [...new Set(allReminders.map(r => r.user_name))].sort();
-    sel.innerHTML = '<option value="all">All Users</option>' +
-      users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
-    sel.value = users.includes(currentVal) ? currentVal : 'all';
-  }
-
-  function renderReminders() {
-    const filter = document.getElementById('reminderUserFilter').value;
-    const filtered = filter === 'all' ? allReminders : allReminders.filter(r => r.user_name === filter);
-
-    // Stats
-    const pending = filtered.filter(r => !r.fired).length;
-    const fired = filtered.filter(r => r.fired).length;
-    const errored = filtered.filter(r => r.error).length;
-    document.getElementById('reminderStats').innerHTML =
-      `<span class="r-stat">Total: <strong>${filtered.length}</strong></span>` +
-      `<span class="r-stat">Pending: <strong style="color:#ca8a04">${pending}</strong></span>` +
-      `<span class="r-stat">Fired: <strong style="color:#16a34a">${fired}</strong></span>` +
-      (errored ? `<span class="r-stat">Errors: <strong style="color:#dc2626">${errored}</strong></span>` : '');
-
-    if (!filtered.length) {
-      document.getElementById('reminderList').innerHTML = '<div class="r-empty">No reminders found.</div>';
-      return;
-    }
-
-    const rows = filtered.map(r => {
+  function renderCheckList(reminders) {
+    const chk = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+    const html = reminders.map(r => {
       const channels = (r.channels || []).map(ch => {
-        if (ch === 'email') return '<span class="r-channel-badge r-ch-email">📧 Email</span>';
-        if (ch === 'call') return '<span class="r-channel-badge r-ch-call">📞 Call</span>';
-        return `<span class="r-channel-badge">${esc(ch)}</span>`;
+        if (ch === 'email') return '<span class="cr-item-ch cr-ch-email">📧 Email</span>';
+        return '<span class="cr-item-ch cr-ch-call">📞 Call</span>';
       }).join('');
-
-      let status;
-      if (r.error) status = `<span class="r-status-error" title="${esc(r.error)}">❌ Error</span>`;
-      else if (r.fired) status = '<span class="r-status-fired">✅ Fired</span>';
-      else status = '<span class="r-status-pending">⏳ Pending</span>';
-
-      const chs = r.channels || [];
-      const contact = [
-        chs.includes('email') && r.target_email ? `📧 ${esc(r.target_email)}` : '',
-        chs.includes('call') && r.target_phone ? `📞 ${esc(r.target_phone)}` : ''
-      ].filter(Boolean).join('<br>');
-
-      const fireTime = r.fire_at_la || '—';
-
-      return `<tr>
-        <td class="r-id">${r.id}</td>
-        <td class="r-user">${esc(r.user_name)}</td>
-        <td class="r-content" title="${esc(r.content)}">${esc(r.content)}</td>
-        <td style="white-space:nowrap">${esc(fireTime)}</td>
-        <td>${channels}</td>
-        <td class="r-contact">${contact || '—'}</td>
-        <td>${status}</td>
-        <td><button class="r-delete-btn" onclick="deleteReminder(${r.id}, '${esc(r.content).replace(/'/g, "\\'")}')">Delete</button></td>
-      </tr>`;
-    }).join('');
-
-    document.getElementById('reminderList').innerHTML = `
-      <div style="overflow-x:auto">
-        <table class="reminder-table">
-          <thead><tr>
-            <th>ID</th><th>User</th><th>Content</th><th>Fire At (LA)</th>
-            <th>Channels</th><th>Send To</th><th>Status</th><th></th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  }
-
-  async function deleteReminder(id, content) {
-    const ok = await showModal(
-      'Delete reminder?',
-      `<strong>ID: ${id}</strong><br>${esc(content)}<br><br>This cannot be undone.`
-    );
-    if (!ok) return;
-    try {
-      const res = await fetch(`${BACKEND}/admin/reminders/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.error) { showModal('Delete failed', esc(data.error), '⚠️'); return; }
-      await loadReminders();
-    } catch(e) {
-      showModal('Delete failed', esc(e.message), '⚠️');
-    }
-  }
-
-  // ── PO Reminders Management ──────────────────────────────────────
-  let poOdooUsers = [];
-
-  // ── Recipient helpers: store Odoo uid, tolerate legacy name values ──
-  function resolveUidValue(v) {
-    v = String(v == null ? '' : v).trim();
-    if (v === 'ALL' || v === '') return v;
-    if (poOdooUsers.some(u => String(u.uid) === v)) return v;
-    const m = poOdooUsers.find(u => u.name === v);  // legacy name → uid
-    return m ? String(m.uid) : v;
-  }
-  function userCheckboxHtml(selectedCsv) {
-    if (!poOdooUsers.length) return '<span style="color:#aaa;font-size:13px">Loading…</span>';
-    const raw = String(selectedCsv == null ? '' : selectedCsv).split(',').map(x => x.trim()).filter(Boolean);
-    const norm = new Set();
-    raw.forEach(v => {
-      if (poOdooUsers.some(u => String(u.uid) === v)) norm.add(v);
-      else { const m = poOdooUsers.find(u => u.name === v); if (m) norm.add(String(m.uid)); }  // legacy name → uid
-    });
-    return poOdooUsers.map(u =>
-      `<label style="display:inline-flex;align-items:center;gap:3px;font-size:13px;white-space:nowrap;cursor:pointer">`
-      + `<input type="checkbox" value="${esc(String(u.uid))}"${norm.has(String(u.uid)) ? ' checked' : ''}> ${esc(u.name)}</label>`
-    ).join('');
-  }
-  function renderUserCheckboxes(containerId, selectedCsv) {
-    const cont = document.getElementById(containerId);
-    if (cont) cont.innerHTML = userCheckboxHtml(selectedCsv);
-  }
-  function getCheckedUids(containerId) {
-    const cont = document.getElementById(containerId);
-    if (!cont) return '';
-    return Array.from(cont.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value).join(',');
-  }
-
-  function togglePOReminders() {
-    const panel = document.getElementById('poReminderPanel');
-    const isHidden = panel.style.display === 'none';
-    panel.style.display = isHidden ? 'block' : 'none';
-    // Hide other panels
-    document.getElementById('reminderPanel').style.display = 'none';
-    const capPanel = document.getElementById('captureReminderPanel');
-    if (capPanel) capPanel.style.display = 'none';
-    const commPanel1 = document.getElementById('commissionReportPanel');
-    if (commPanel1) commPanel1.style.display = 'none';
-    if (isHidden) {
-      // Load users FIRST, then reminders (so dropdown is populated before rendering)
-      loadPOOdooUsers().then(() => loadPOReminders());
-    }
-  }
-
-  async function loadPOOdooUsers() {
-    try {
-      const res = await fetch(`${BACKEND}/admin/odoo-users?admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error || !data.users) return;
-      poOdooUsers = data.users;
-      const sel = document.getElementById('poNewTarget');
-      sel.innerHTML = '<option value="ALL">All Internal Users</option>' +
-        poOdooUsers.map(u => `<option value="${esc(String(u.uid))}">${esc(u.name)}</option>`).join('');
-    } catch(e) {
-      console.error('Failed to load Odoo users:', e);
-    }
-  }
-
-  function toggleOneTimeDate() {
-    const freq = document.getElementById('poNewFreq').value;
-    document.getElementById('poDateGroup').style.display = freq === 'onetime' ? 'flex' : 'none';
-  }
-
-  async function loadPOReminders() {
-    try {
-      const res = await fetch(`${BACKEND}/admin/po-reminders?admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error) { document.getElementById('poReminderList').innerHTML = `<p style="color:red">${esc(data.error)}</p>`; return; }
-      renderPOReminders(data.schedules || []);
-    } catch(e) {
-      document.getElementById('poReminderList').innerHTML = `<p style="color:red">${esc(e.message)}</p>`;
-    }
-  }
-
-  function renderPOReminders(schedules) {
-    if (!schedules.length) {
-      document.getElementById('poReminderList').innerHTML = '<p style="color:#888;font-size:13px">No scheduled messages yet. Add one above.</p>';
-      return;
-    }
-    const userOpts = '<option value="ALL">Everyone</option>' + poOdooUsers.map(u => `<option value="${esc(String(u.uid))}">${esc(u.name)}</option>`).join('');
-    const rows = schedules.map(s => {
-      const poMode = s.only_payment_pos || 'none';
-      const freq = s.frequency || 'everyday';
-      const statusBadge = s.active
-        ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
-        : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Paused</span>';
-      const otdInput = freq === 'onetime' ? `<br><input type="date" value="${esc(s.one_time_date||'')}" id="po-otd-${s.id}" style="width:120px;padding:2px 4px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;margin-top:4px" onchange="savePOSchedule(${s.id})">` : '';
-      // Format last_fired_at
-      let lastFired = '—';
-      if (s.last_fired_at) {
-        try {
-          const d = new Date(s.last_fired_at);
-          lastFired = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles' });
-        } catch(e) { lastFired = s.last_fired_at; }
+      const hasEmail = (r.channels || []).includes('email');
+      const hasCall = (r.channels || []).includes('call');
+      // Convert fire_at_iso (UTC) to local time for datetime-local input
+      let localISO = '';
+      if (r.fire_at_iso) {
+        const utcDate = new Date(r.fire_at_iso + (r.fire_at_iso.endsWith('Z') ? '' : 'Z'));
+        const pad = n => String(n).padStart(2, '0');
+        localISO = `${utcDate.getFullYear()}-${pad(utcDate.getMonth()+1)}-${pad(utcDate.getDate())}T${pad(utcDate.getHours())}:${pad(utcDate.getMinutes())}`;
       }
-      return `<tr id="po-row-${s.id}">
-        <td>${s.id}</td>
-        <td><input type="text" value="${esc(s.time_pt)}" id="po-time-${s.id}" style="width:50px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="savePOSchedule(${s.id})"></td>
-        <td><select id="po-freq-${s.id}" style="padding:3px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px" onchange="onFreqChange(${s.id})">
-          <option value="weekday"${freq==='weekday'?' selected':''}>Mon–Fri</option>
-          <option value="everyday"${freq==='everyday'?' selected':''}>Everyday</option>
-          <option value="onetime"${freq==='onetime'?' selected':''}>One Time</option>
-        </select>${otdInput}</td>
-        <td><select id="po-target-${s.id}" style="padding:3px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px" onchange="savePOSchedule(${s.id})">${userOpts}</select></td>
-        <td><input type="text" value="${esc(s.message || '')}" id="po-msg-${s.id}" style="width:100%;padding:4px 6px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px" onchange="savePOSchedule(${s.id})"></td>
-        <td><select id="po-attach-${s.id}" style="padding:3px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px" onchange="savePOSchedule(${s.id})">
-          <option value="none"${poMode==='none'?' selected':''}>No</option>
-          <option value="payment"${poMode==='payment'?' selected':''}>Payment POs</option>
-          <option value="all_draft"${poMode==='all_draft'?' selected':''}>All Draft</option>
-        </select></td>
-        <td>${statusBadge}</td>
-        <td style="font-size:11px;color:#888;white-space:nowrap">${lastFired}</td>
-        <td style="white-space:nowrap">
-          <button onclick="togglePOSchedule(${s.id}, ${!s.active})" style="padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸' : '▶'}</button>
-          <button onclick="deletePOSchedule(${s.id})" style="padding:4px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑</button>
-        </td>
-      </tr>`;
-    }).join('');
-    document.getElementById('poReminderList').innerHTML = `
-      <div style="overflow-x:auto">
-        <table class="reminder-table">
-          <thead><tr><th>ID</th><th>Time</th><th>Frequency</th><th>Send to</th><th>Message</th><th>PO Attach</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
+      
+      return `<div class="cr-item" id="cr_${r.id}">
+        <div class="cr-item-header">
+          <div style="flex:1;min-width:0">
+            <div class="cr-item-content">${escHtml(r.content)}</div>
+            <div class="cr-item-time">⏰ ${escHtml(r.fire_at_la || '')}</div>
+            <div class="cr-item-channels">${channels}</div>
+          </div>
+          <div class="cr-item-actions">
+            <button class="cr-btn-edit" onclick="toggleCrEdit(${r.id})">Edit</button>
+            <button class="cr-btn-del" onclick="deleteCr(${r.id})">Delete</button>
+          </div>
+        </div>
+        <div class="cr-edit-form" id="crEdit_${r.id}">
+          <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">CONTENT</div>
+          <input class="cr-edit-input" id="crContent_${r.id}" value="${escHtml(r.content)}" placeholder="Content">
+          <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">TIME</div>
+          <label style="display:block;position:relative;margin-bottom:8px;cursor:pointer">
+            <div id="crTimeLabel_${r.id}" style="padding:10px 12px;border:1px solid #e0e0e0;border-radius:10px;font-size:15px;color:#111;background:#fafafa">${escHtml(r.fire_at_la || 'Tap to set time')}</div>
+            <input id="crTime_${r.id}" type="datetime-local" value="${localISO}" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.01;font-size:16px;-webkit-appearance:none;border:none;background:transparent" onchange="document.getElementById('crTimeLabel_${r.id}').textContent=new Date(this.value).toLocaleString()">
+          </label>
+          <div style="font-size:12px;font-weight:600;color:#999;margin-bottom:4px">METHOD</div>
+          <div class="cr-edit-row">
+            <button class="cr-edit-ch ${hasEmail ? 'active' : ''}" id="crEmail_${r.id}" onclick="this.classList.toggle('active')">
+              <span class="cr-chk">${chk}</span> 📧 Email
+            </button>
+            <button class="cr-edit-ch ${hasCall ? 'active' : ''}" id="crCall_${r.id}" onclick="this.classList.toggle('active')">
+              <span class="cr-chk">${chk}</span> 📞 Call
+            </button>
+          </div>
+          <button class="cr-edit-save" onclick="saveCr(${r.id})">Save Changes</button>
+        </div>
       </div>`;
-    schedules.forEach(s => {
-      const sel = document.getElementById('po-target-' + s.id);
-      if (sel) sel.value = resolveUidValue(s.target_user);  // legacy name rows → uid
-    });
+    }).join('');
+    document.getElementById('crList').innerHTML = html;
   }
 
-  async function onFreqChange(id) {
-    await savePOSchedule(id);
-    await loadPOReminders(); // re-render to show/hide date picker
+  function toggleCrEdit(id) {
+    const form = document.getElementById('crEdit_' + id);
+    const isOpen = form.classList.toggle('active');
+    if (isOpen) {
+      // Scroll edit form into view after animation
+      setTimeout(() => {
+        const item = document.getElementById('cr_' + id);
+        if (item) item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
   }
 
-  async function savePOSchedule(id) {
-    const time = document.getElementById('po-time-' + id)?.value?.trim();
-    const target = document.getElementById('po-target-' + id)?.value;
-    const message = document.getElementById('po-msg-' + id)?.value?.trim();
-    const attach = document.getElementById('po-attach-' + id)?.value;
-    const freq = document.getElementById('po-freq-' + id)?.value;
-    const otd = document.getElementById('po-otd-' + id)?.value || '';
+  async function saveCr(id) {
+    const content = document.getElementById('crContent_' + id)?.value?.trim() || '';
+    const timeVal = document.getElementById('crTime_' + id)?.value || '';
+    const hasEmail = document.getElementById('crEmail_' + id)?.classList.contains('active');
+    const hasCall = document.getElementById('crCall_' + id)?.classList.contains('active');
+    const channels = [];
+    if (hasEmail) channels.push('email');
+    if (hasCall) channels.push('call');
+    if (!channels.length) { alert('Select at least one method'); return; }
+
+    // Convert local time to LA time
+    let fireAtLA = '';
+    if (timeVal) {
+      const dt = new Date(timeVal);
+      fireAtLA = dt.toLocaleString('sv-SE', {
+        timeZone: 'America/Los_Angeles',
+        year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false
+      }).replace(' ', 'T') + ':00';
+    }
+
+    const saveBtn = document.querySelector(`#crEdit_${id} .cr-edit-save`);
+    if (saveBtn) { saveBtn.textContent = 'Saving...'; saveBtn.disabled = true; }
+
     try {
-      const params = new URLSearchParams({ admin_key: adminKey });
-      if (time) params.set('time_pt', time);
-      if (target) params.set('target_user', target);
-      if (message !== undefined) params.set('message', message);
-      if (attach) params.set('only_payment_pos', attach);
-      if (freq) params.set('frequency', freq);
-      params.set('one_time_date', otd);
-      const res = await fetch(`${BACKEND}/admin/po-reminders/${id}?${params}`, { method: 'PUT' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      const row = document.getElementById('po-row-' + id);
-      if (row) { row.style.background = '#f0fdf4'; setTimeout(() => row.style.background = '', 800); }
-    } catch(e) { alert(e.message); }
-  }
-
-  async function addPOReminder() {
-    const hour = document.getElementById('poNewHour').value;
-    const min = document.getElementById('poNewMin').value;
-    const target = document.getElementById('poNewTarget').value;
-    const message = document.getElementById('poNewMessage').value.trim();
-    const poAttach = document.getElementById('poNewOnlyPayment').value;
-    const freq = document.getElementById('poNewFreq').value;
-    const otd = document.getElementById('poNewDate')?.value || '';
-    if (!hour) { alert('Please select an hour'); return; }
-    if (!message && poAttach === 'none') { alert('Please enter a message or select a PO attachment'); return; }
-    if (freq === 'onetime' && !otd) { alert('Please select a date for one-time message'); return; }
-    const time = `${hour.padStart(2,'0')}:${min}`;
-    try {
-      const params = new URLSearchParams({ admin_key: adminKey, time_pt: time, target_user: target, message, only_payment_pos: poAttach, frequency: freq, one_time_date: otd });
-      const res = await fetch(`${BACKEND}/admin/po-reminders?${params}`, { method: 'POST' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      document.getElementById('poNewHour').value = '';
-      document.getElementById('poNewMessage').value = '';
-      await loadPOReminders();
-    } catch(e) { alert(e.message); }
-  }
-
-  async function togglePOSchedule(id, newActive) {
-    try {
-      const res = await fetch(`${BACKEND}/admin/po-reminders/${id}?admin_key=${encodeURIComponent(adminKey)}&active=${newActive}`, { method: 'PUT' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      await loadPOReminders();
-    } catch(e) { alert(e.message); }
-  }
-
-  async function deletePOSchedule(id) {
-    if (!confirm('Delete this scheduled message?')) return;
-    try {
-      const res = await fetch(`${BACKEND}/admin/po-reminders/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      await loadPOReminders();
-    } catch(e) { alert(e.message); }
-  }
-
-  async function testPOReminder() {
-    const target = document.getElementById('poNewTarget').value || 'ALL';
-    const message = document.getElementById('poNewMessage').value.trim();
-    const poAttach = document.getElementById('poNewOnlyPayment').value;
-    const _tu = poOdooUsers.find(u => String(u.uid) === String(target));
-    const label = target === 'ALL' ? 'all internal users' : (_tu ? _tu.name : target);
-    if (!confirm(`Send a test message to ${label} right now?`)) return;
-    try {
-      const params = new URLSearchParams({ admin_key: adminKey, target_user: target, message, only_payment_pos: poAttach });
-      const res = await fetch(`${BACKEND}/admin/po-reminders/test?${params}`, { method: 'POST' });
+      const res = await fetch(`${BACKEND}/api/my-reminders/${id}?session_token=${encodeURIComponent(currentUser?.session_token || '')}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ content, fire_at: fireAtLA, channels })
+      });
       const data = await res.json();
       if (data.error) { alert('Error: ' + data.error); return; }
-      alert('Test message sent! Check Odoo Discuss.');
-    } catch(e) { alert(e.message); }
-  }
-
-  // ── Capture Reminders ──
-  function toggleCaptureReminders() {
-    const panel = document.getElementById('captureReminderPanel');
-    const isHidden = panel.style.display === 'none';
-    panel.style.display = isHidden ? 'block' : 'none';
-    document.getElementById('reminderPanel').style.display = 'none';
-    document.getElementById('poReminderPanel').style.display = 'none';
-    const commPanel2 = document.getElementById('commissionReportPanel');
-    if (commPanel2) commPanel2.style.display = 'none';
-    if (isHidden) loadPOOdooUsers().then(() => {
-      renderUserCheckboxes('capNewRecipients', '');
-      loadCaptureReminders();
-    });
-  }
-
-  async function loadCaptureReminders() {
-    try {
-      const res = await fetch(`${BACKEND}/admin/capture-reminders?admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error) { document.getElementById('capReminderList').innerHTML = `<p style="color:red">${esc(data.error)}</p>`; return; }
-      renderCaptureReminders(data.schedules || []);
-    } catch(e) {
-      document.getElementById('capReminderList').innerHTML = `<p style="color:red">${esc(e.message)}</p>`;
-    }
-  }
-
-  function renderCaptureReminders(schedules) {
-    if (!schedules.length) {
-      document.getElementById('capReminderList').innerHTML = '<p style="color:#888;font-size:13px">No capture reminder schedules yet. Add one above.</p>';
-      return;
-    }
-    const rows = schedules.map(s => {
-      const freq = s.frequency || 'everyday';
-      const statusBadge = s.active
-        ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
-        : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Paused</span>';
-      let lastFired = '—';
-      if (s.last_fired_at) {
-        try {
-          const d = new Date(s.last_fired_at);
-          lastFired = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles' });
-        } catch(e) { lastFired = s.last_fired_at; }
+      
+      // Update display in-place (no reload flash)
+      const item = document.getElementById('cr_' + id);
+      if (item) {
+        const contentEl = item.querySelector('.cr-item-content');
+        const timeEl = item.querySelector('.cr-item-time');
+        const chEl = item.querySelector('.cr-item-channels');
+        if (contentEl) contentEl.textContent = content;
+        if (timeVal && timeEl) {
+          const displayTime = new Date(timeVal).toLocaleString();
+          timeEl.textContent = '⏰ ' + displayTime;
+        }
+        if (chEl) {
+          chEl.innerHTML = channels.map(ch =>
+            ch === 'email' ? '<span class="cr-item-ch cr-ch-email">📧 Email</span>'
+            : '<span class="cr-item-ch cr-ch-call">📞 Call</span>'
+          ).join('');
+        }
       }
-      return `<tr id="cap-row-${s.id}">
-        <td>${s.id}</td>
-        <td><input type="text" value="${esc(s.time_pt)}" id="cap-time-${s.id}" style="width:50px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCaptureSchedule(${s.id})"></td>
-        <td><select id="cap-freq-${s.id}" style="padding:3px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px" onchange="saveCaptureSchedule(${s.id})">
-          <option value="everyday"${freq==='everyday'?' selected':''}>Everyday</option>
-          <option value="weekday"${freq==='weekday'?' selected':''}>Mon–Fri</option>
-        </select></td>
-        <td><div id="cap-recip-${s.id}" onchange="saveCaptureSchedule(${s.id})" style="display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;min-width:180px">${userCheckboxHtml(s.recipients)}</div></td>
-        <td>${statusBadge}</td>
-        <td style="font-size:11px;color:#888;white-space:nowrap">${lastFired}</td>
-        <td style="white-space:nowrap">
-          <button onclick="toggleCaptureSchedule(${s.id}, ${!s.active})" style="padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸' : '▶'}</button>
-          <button onclick="deleteCaptureSchedule(${s.id})" style="padding:4px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑</button>
-        </td>
-      </tr>`;
-    }).join('');
-    document.getElementById('capReminderList').innerHTML = `
-      <div style="overflow-x:auto">
-        <table class="reminder-table">
-          <thead><tr><th>ID</th><th>Time</th><th>Frequency</th><th>Recipients</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
+      // Close edit form
+      const form = document.getElementById('crEdit_' + id);
+      if (form) form.classList.remove('active');
+    } catch(e) { alert('Error: ' + e.message); }
+    finally {
+      if (saveBtn) { saveBtn.textContent = 'Save Changes'; saveBtn.disabled = false; }
+    }
   }
 
-  async function addCaptureReminder() {
-    const hour = document.getElementById('capNewHour').value;
-    const min = document.getElementById('capNewMin').value;
-    const freq = document.getElementById('capNewFreq').value;
-    const recipients = getCheckedUids('capNewRecipients');
-    if (!hour) { alert('Please select an hour'); return; }
-    if (!recipients) { alert('Please select at least one recipient'); return; }
-    const time_pt = `${String(hour).padStart(2,'0')}:${min}`;
+  async function deleteCr(id) {
+    if (!confirm('Delete this reminder?')) return;
     try {
-      const params = new URLSearchParams({ admin_key: adminKey, time_pt, recipients, frequency: freq });
-      const res = await fetch(`${BACKEND}/admin/capture-reminders?${params}`, { method: 'POST' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      loadCaptureReminders();
-    } catch(e) { alert(e.message); }
-  }
-
-  async function saveCaptureSchedule(id) {
-    const time = document.getElementById('cap-time-' + id)?.value?.trim();
-    const recipients = getCheckedUids('cap-recip-' + id);
-    const freq = document.getElementById('cap-freq-' + id)?.value;
-    try {
-      const params = new URLSearchParams({ admin_key: adminKey });
-      if (time) params.set('time_pt', time);
-      if (recipients !== undefined) params.set('recipients', recipients);
-      if (freq) params.set('frequency', freq);
-      const res = await fetch(`${BACKEND}/admin/capture-reminders/${id}?${params}`, { method: 'PUT' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      const row = document.getElementById('cap-row-' + id);
-      if (row) { row.style.background = '#faf5ff'; setTimeout(() => row.style.background = '', 800); }
-    } catch(e) { alert(e.message); }
-  }
-
-  async function toggleCaptureSchedule(id, newActive) {
-    try {
-      const params = new URLSearchParams({ admin_key: adminKey, active: newActive });
-      const res = await fetch(`${BACKEND}/admin/capture-reminders/${id}?${params}`, { method: 'PUT' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      loadCaptureReminders();
-    } catch(e) { alert(e.message); }
-  }
-
-  async function deleteCaptureSchedule(id) {
-    if (!confirm('Delete this capture reminder schedule?')) return;
-    try {
-      const res = await fetch(`${BACKEND}/admin/capture-reminders/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      loadCaptureReminders();
-    } catch(e) { alert(e.message); }
-  }
-
-  async function testCaptureReminder() {
-    const recipients = getCheckedUids('capNewRecipients');
-    if (!recipients) { alert('Please select recipient(s) before testing'); return; }
-    if (!confirm(`Send a test capture reminder to selected user(s) right now?`)) return;
-    try {
-      const params = new URLSearchParams({ admin_key: adminKey, recipients });
-      const res = await fetch(`${BACKEND}/admin/capture-reminders/test?${params}`, { method: 'POST' });
+      const res = await fetch(`${BACKEND}/api/my-reminders/${id}?session_token=${encodeURIComponent(currentUser?.session_token || '')}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.error) { alert('Error: ' + data.error); return; }
-      alert('Test capture reminder sent! Check Odoo Discuss.');
-    } catch(e) { alert(e.message); }
-  }
-
-  async function previewCaptureReminder() {
-    const box = document.getElementById('capPreviewBox');
-    box.style.display = 'block';
-    box.textContent = 'Loading preview...';
-    try {
-      const res = await fetch(`${BACKEND}/admin/capture-reminder-preview?admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error) { box.textContent = 'Error: ' + data.error; return; }
-      if (data.pending === 0) { box.textContent = '✅ ' + (data.message || 'No pending capture transactions'); return; }
-      box.textContent = data.preview_text || JSON.stringify(data, null, 2);
-    } catch(e) { box.textContent = 'Error: ' + e.message; }
-  }
-
-  // ── Commission Reports ──
-  function toggleCommissionReports() {
-    const panel = document.getElementById('commissionReportPanel');
-    const isHidden = panel.style.display === 'none';
-    panel.style.display = isHidden ? 'block' : 'none';
-    document.getElementById('reminderPanel').style.display = 'none';
-    const po = document.getElementById('poReminderPanel'); if (po) po.style.display = 'none';
-    const cap = document.getElementById('captureReminderPanel'); if (cap) cap.style.display = 'none';
-    if (isHidden) loadPOOdooUsers().then(() => {
-      renderUserCheckboxes('commNewRecipients', '');
-      loadCommissionReports();
-    });
-  }
-
-  async function loadCommissionReports() {
-    try {
-      const res = await fetch(`${BACKEND}/admin/commission-reports?admin_key=${encodeURIComponent(adminKey)}`);
-      const data = await res.json();
-      if (data.error) { document.getElementById('commReportList').innerHTML = `<p style="color:red">${esc(data.error)}</p>`; return; }
-      renderCommissionReports(data.schedules || []);
-    } catch(e) {
-      document.getElementById('commReportList').innerHTML = `<p style="color:red">${esc(e.message)}</p>`;
-    }
-  }
-
-  function renderCommissionReports(schedules) {
-    if (!schedules.length) {
-      document.getElementById('commReportList').innerHTML = '<p style="color:#888;font-size:13px">No commission report schedules yet. Add one above.</p>';
-      return;
-    }
-    const rows = schedules.map(s => {
-      const statusBadge = s.active
-        ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
-        : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Paused</span>';
-      let lastFired = '—';
-      if (s.last_fired_at) {
-        try {
-          const d = new Date(s.last_fired_at);
-          lastFired = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles' });
-        } catch(e) { lastFired = s.last_fired_at; }
+      document.getElementById('cr_' + id)?.remove();
+      // Check if list is empty
+      if (!document.getElementById('crList').querySelector('.cr-item')) {
+        document.getElementById('crList').innerHTML = '<div class="cr-empty">No pending reminders</div>';
       }
-      return `<tr id="comm-row-${s.id}">
-        <td>${s.id}</td>
-        <td><input type="number" min="1" max="28" value="${s.day_of_month}" id="comm-day-${s.id}" style="width:60px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"></td>
-        <td><input type="text" value="${esc(s.time_pt)}" id="comm-time-${s.id}" style="width:50px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"></td>
-        <td><div id="comm-recip-${s.id}" onchange="saveCommissionSchedule(${s.id})" style="display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;min-width:180px">${userCheckboxHtml(s.recipients)}</div></td>
-        <td>${statusBadge}</td>
-        <td style="font-size:11px;color:#888;white-space:nowrap">${lastFired}</td>
-        <td style="white-space:nowrap">
-          <button onclick="toggleCommissionSchedule(${s.id}, ${!s.active})" style="padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸' : '▶'}</button>
-          <button onclick="deleteCommissionSchedule(${s.id})" style="padding:4px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑</button>
-        </td>
-      </tr>`;
-    }).join('');
-    document.getElementById('commReportList').innerHTML = `
-      <div style="overflow-x:auto">
-        <table class="reminder-table">
-          <thead><tr><th>ID</th><th>Day</th><th>Time</th><th>Recipients</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
+    } catch(e) { alert('Error: ' + e.message); }
   }
 
-  async function addCommissionReport() {
-    const day = document.getElementById('commNewDay').value;
-    const hour = document.getElementById('commNewHour').value;
-    const min = document.getElementById('commNewMin').value;
-    const recipients = getCheckedUids('commNewRecipients');
-    if (!recipients) { alert('Please select at least one recipient'); return; }
-    const time_pt = `${String(hour).padStart(2,'0')}:${min}`;
-    try {
-      const params = new URLSearchParams({ admin_key: adminKey, day_of_month: day, time_pt, recipients });
-      const res = await fetch(`${BACKEND}/admin/commission-reports?${params}`, { method: 'POST' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      loadCommissionReports();
-    } catch(e) { alert(e.message); }
+  // ── Reminder Quick-Create Sheet ──
+  function openReminderSheet() {
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    now.setMinutes(Math.ceil(now.getMinutes() / 5) * 5, 0, 0);
+    const pad = n => String(n).padStart(2, '0');
+    const localISO = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    document.getElementById('rsTime').value = localISO;
+    document.getElementById('rsContent').value = '';
+    document.getElementById('rsEmail').classList.add('active');
+    document.getElementById('rsCall').classList.add('active');
+    document.getElementById('rsCreateBtn').disabled = false;
+    
+    // Admin only: show "Remind who?" and fetch Odoo users
+    const whoWrap = document.getElementById('rsWhoWrap');
+    const whoSelect = document.getElementById('rsWho');
+    whoWrap.classList.remove('visible');  // 先隐藏，只有确认 admin 才显示
+    whoSelect.innerHTML = '<option value="">Myself</option>';
+    
+    if (currentUser && currentUser.role === 'admin') {
+      whoWrap.classList.add('visible');
+      whoSelect.innerHTML = '<option value="">Myself</option><option disabled>Loading…</option>';
+      fetch(`${BACKEND}/api/reminder-users?session_token=${encodeURIComponent(currentUser.session_token || '')}`)
+        .then(r => r.json())
+        .then(data => {
+          console.log('[RS] reminder-users response:', data);
+          whoSelect.innerHTML = '<option value="">Myself</option>';
+          if (data.error) {
+            // Not admin or auth failed → hide dropdown
+            whoWrap.classList.remove('visible');
+            console.log('[RS] hiding dropdown:', data.error);
+            return;
+          }
+          if (data.users && data.users.length) {
+            data.users.forEach(u => {
+              if (u.uid !== currentUser.uid) {
+                const opt = document.createElement('option');
+                opt.value = u.name;
+                opt.textContent = u.name;
+                whoSelect.appendChild(opt);
+              }
+            });
+            console.log('[RS] dropdown options:', whoSelect.options.length - 1, 'users added');
+          }
+        })
+        .catch(e => { console.error('[RS] fetch error:', e); whoWrap.classList.remove('visible'); });
+    }
+    
+    document.getElementById('rsBackdrop').classList.add('visible');
+    document.getElementById('reminderSheet').classList.add('open');
+    setTimeout(() => document.getElementById('rsContent').focus(), 350);
   }
 
-  async function saveCommissionSchedule(id) {
-    const day = document.getElementById('comm-day-' + id)?.value;
-    const time = document.getElementById('comm-time-' + id)?.value?.trim();
-    const recipients = getCheckedUids('comm-recip-' + id);
-    try {
-      const params = new URLSearchParams({ admin_key: adminKey });
-      if (day) params.set('day_of_month', day);
-      if (time) params.set('time_pt', time);
-      if (recipients !== undefined) params.set('recipients', recipients);
-      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?${params}`, { method: 'PUT' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      const row = document.getElementById('comm-row-' + id);
-      if (row) { row.style.background = '#ecfeff'; setTimeout(() => row.style.background = '', 800); }
-    } catch(e) { alert(e.message); }
+  function closeReminderSheet() {
+    const sheet = document.getElementById('reminderSheet');
+    document.getElementById('rsBackdrop').classList.remove('visible');
+    sheet.classList.remove('open');
+    sheet.style.bottom = '0';
+    sheet.style.maxHeight = '85vh';
   }
 
-  async function toggleCommissionSchedule(id, newActive) {
-    try {
-      const params = new URLSearchParams({ admin_key: adminKey, active: newActive });
-      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?${params}`, { method: 'PUT' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      loadCommissionReports();
-    } catch(e) { alert(e.message); }
+  function toggleMethod(id) {
+    document.getElementById(id).classList.toggle('active');
+    // Must have at least one method
+    const hasEmail = document.getElementById('rsEmail').classList.contains('active');
+    const hasCall = document.getElementById('rsCall').classList.contains('active');
+    if (!hasEmail && !hasCall) document.getElementById(id).classList.add('active');
   }
 
-  async function deleteCommissionSchedule(id) {
-    if (!confirm('Delete this commission report schedule?')) return;
-    try {
-      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      loadCommissionReports();
-    } catch(e) { alert(e.message); }
-  }
+  async function createReminderFromSheet() {
+    const content = document.getElementById('rsContent').value.trim();
+    const timeVal = document.getElementById('rsTime').value;
+    if (!content) { document.getElementById('rsContent').focus(); return; }
+    if (!timeVal) { document.getElementById('rsTime').focus(); return; }
 
-  async function testCommissionReport() {
-    const recipients = getCheckedUids('commNewRecipients');
-    if (!recipients) { alert('Please select recipient(s) before testing'); return; }
-    if (!confirm(`Send a test commission report (last month) to selected user(s) right now?`)) return;
+    const hasEmail = document.getElementById('rsEmail').classList.contains('active');
+    const hasCall = document.getElementById('rsCall').classList.contains('active');
+    const targetName = (document.getElementById('rsWho')?.value || '').trim();
+    const channels = [];
+    if (hasEmail) channels.push('email');
+    if (hasCall) channels.push('call');
+    if (!channels.length) channels.push('email', 'call');
+
+    // Convert local time → LA time for backend
+    const localDate = new Date(timeVal);
+    const laTimeStr = localDate.toLocaleString('sv-SE', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).replace(' ', 'T') + ':00';
+
+    const btn = document.getElementById('rsCreateBtn');
+    btn.textContent = 'Creating...'; btn.disabled = true;
+
     try {
-      const params = new URLSearchParams({ admin_key: adminKey, recipients });
-      const res = await fetch(`${BACKEND}/admin/commission-reports/test?${params}`, { method: 'POST' });
+      const res = await fetch(`${BACKEND}/api/my-reminders?session_token=${encodeURIComponent(currentUser?.session_token || '')}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, fire_at: laTimeStr, channels, target_name: targetName })
+      });
       const data = await res.json();
       if (data.error) { alert('Error: ' + data.error); return; }
-      alert('Test commission report sent! Check Odoo Discuss.');
-    } catch(e) { alert(e.message); }
+
+      // Success — close sheet, show confirmation as bot message
+      closeReminderSheet();
+      hideEmpty();
+      const cn = /^zh/i.test(navigator.language);
+      const who = data.target_user || (cn ? '你' : 'you');
+      let msg = cn ? `✅ 已设置成功！\n\n提醒信息已发送给 ${who}：` : `✅ Reminder set!\n\nFor ${who}:`;
+      if (data.target_email) msg += `\n• 📧 ${cn?'邮件':'Email'}：${data.target_email}`;
+      if (data.target_phone) msg += `\n• 📞 ${cn?'电话':'Phone'}：${data.target_phone}`;
+      msg += `\n• ⏰ ${cn?'时间':'Time'}：${data.fire_at_la}`;
+      msg += `\n• 📝 ${cn?'内容':'Content'}：${data.content}`;
+      renderBotMsgDOM(msg, false);
+      scrollBottom();
+    } catch(e) { alert('Network error: ' + e.message); }
+    finally { btn.textContent = 'Create Reminder'; btn.disabled = false; }
+  }
+  function scrollBottom() { msgCont.scrollTop = msgCont.scrollHeight; }
+  function hideEmpty() { emptyEl.style.display = 'none'; }
+
+  const mainContent = document.querySelector('.main-content');
+  const dropOverlay = document.getElementById('dropOverlay');
+  let dragCounter = 0;
+
+  mainContent.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; if (dragCounter === 1) dropOverlay.classList.add('active'); });
+  mainContent.addEventListener('dragleave', (e) => { e.preventDefault(); dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); } });
+  mainContent.addEventListener('dragover', (e) => { e.preventDefault(); });
+  mainContent.addEventListener('drop', async (e) => {
+    e.preventDefault(); dragCounter = 0; dropOverlay.classList.remove('active');
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader(); reader.onload = (ev) => { window._pastePreview = ev.target.result; }; reader.readAsDataURL(file);
+      }
+      await uploadFile(file);
+    }
+  });
+
+  async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return; event.target.value = ''; await uploadFile(file);
+  }
+
+  async function handlePaste(event) {
+    const items = event.clipboardData && event.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+        const ext = item.type.split('/')[1] || 'png';
+        const blob = item.getAsFile();
+        const file = new File([blob], `paste_${Date.now()}.${ext}`, { type: item.type });
+        const reader = new FileReader(); reader.onload = (e) => { window._pastePreview = e.target.result; }; reader.readAsDataURL(blob);
+        await uploadFile(file); return;
+      }
+    }
+  }
+
+  async function uploadFile(file) {
+    isUploading = true; sendBtn.disabled = true; uploadBtn.classList.add('has-file');
+    showFilePreview(null, file.name, true);
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await fetch(BACKEND + '/extract-file', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) { clearAttachment(); alert('Upload failed: ' + data.error); return; }
+      attachedFile = { name: data.name || file.name, content: data.text || '', fileId: data.file_id || '', isImage: data.is_image || false, previewUrl: data.preview_url || '', excelBase64: data.excel_base64 || '' };
+      showFilePreview(attachedFile.name, null, false, attachedFile.previewUrl);
+    } catch (e) { clearAttachment(); alert('Upload error: ' + e.message); } 
+    finally { isUploading = false; sendBtn.disabled = !input.value.trim(); }
+  }
+
+  function showFilePreview(name, raw, uploading, previewUrl) {
+    filePrev.style.display = 'block';
+    if (uploading) {
+      filePrev.innerHTML = `<div class="uploading-badge"><div class="spinner"></div>Uploading ${escHtml(raw || '')}…</div>`;
+    } else {
+      const imgPreview = previewUrl
+        ? `<img src="${previewUrl}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid #e8e8e8;flex-shrink:0">`
+        : `<div class="file-chip-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>`;
+      filePrev.innerHTML = `<div class="file-chip">${imgPreview}<span class="file-chip-name">${escHtml(name)}</span><button class="file-chip-remove" onclick="clearAttachment()">✕</button></div>`;
+    }
+  }
+
+  function clearAttachment() { attachedFile = null; isUploading = false; filePrev.style.display = 'none'; filePrev.innerHTML = ''; uploadBtn.classList.remove('has-file'); }
+
+  function renderUserMsgDOM(text, fileName, imagePreview) {
+    hideEmpty(); const row = document.createElement('div'); row.className = 'message-wrapper user';
+    let fileHtml = '';
+    if (fileName) {
+      if (imagePreview) { fileHtml = `<div style="margin-bottom:8px"><img src="${imagePreview}" style="max-width:240px;max-height:180px;border-radius:10px;border:1px solid #e8e8e8;cursor:pointer" onclick="showImageOverlay(this.src)"></div>`; } 
+      else { fileHtml = `<div class="file-attachment-bubble"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>${escHtml(fileName)}</div>`; }
+    }
+    const initials = currentUser ? (currentUser.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : 'ME';
+    row.innerHTML = `<div class="avatar user-av">${initials}</div><div class="message-content">${fileHtml}${escHtml(text)}</div>`;
+    msgList.appendChild(row);
+  }
+
+  function renderBotMsgDOM(text, isError) {
+    const row = document.createElement('div'); row.className = 'message-wrapper bot';
+    const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
+    let extraBtn = buildExtraButton(text);
+    row.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content ${isError?'error-text':''}">${formatText(text)}${extraBtn}</div>`;
+    msgList.appendChild(row);
+  }
+
+  function escHtml(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function inlineFormat(text) {
+    text = escHtml(text);
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    text = text.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
+    text = text.replace(/`([^`]+?)`/g, '<code style="background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:monospace">$1</code>');
+    text = text.replace(/file:\/\/\/docs\//g, '/docs/'); text = text.replace(/file:\/\/\//g, '/');
+    text = text.replace(/\[([^\]]+)\]\(\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
+      let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim(); if (!cleanLabel) cleanLabel = 'Download';
+      return `<button class="doc-dl-btn" onclick="downloadSignedDoc('${docId}','${label}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>${cleanLabel}</button>`;
+    });
+    text = text.replace(/\[([^\]]+)\]\(https?:\/\/[^)]*\/docs\/signed-url\/([^)]+)\)/g, (_, label, docId) => {
+      let cleanLabel = label.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim(); if (!cleanLabel) cleanLabel = 'Download';
+      return `<button class="doc-dl-btn" onclick="downloadSignedDoc('${docId}','${label}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>${cleanLabel}</button>`;
+    });
+    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:#111;text-decoration:underline;font-weight:500">$1</a>');
+    text = text.replace(/(?<!href=["'])(?<!src=["'])(https?:\/\/[^\s<"']+)/g, '<a href="$1" target="_blank" style="color:#2563eb;text-decoration:underline;word-break:break-all">$1</a>');
+    return text;
+  }
+
+  async function downloadSignedDoc(docId, label) {
+    const url = `${BACKEND}/docs/signed-url/${docId}`;
+    const a = document.createElement('a'); a.href = url; a.target = '_blank';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  function parseMarkdownTable(lines, startIdx) {
+    if (!lines[startIdx].includes('|')) return null; const headers = lines[startIdx].split('|').slice(1,-1).map(s => s.trim());
+    if (!headers.length) return null; if (startIdx+1 >= lines.length || !/^[\|:\-\s]+$/.test(lines[startIdx+1])) return null;
+    const rows = []; let i = startIdx + 2;
+    while (i < lines.length && lines[i].includes('|')) { rows.push(lines[i].split('|').slice(1,-1).map(s => s.trim())); i++; }
+    return { headers, rows, endIdx: i };
+  }
+
+  let _tblN = 0;
+  function renderTable(headers, rows, title) {
+    const tid = 'tbl_' + (++_tblN); const fname = (title||'report') + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+    let html = `<div class="md-table-wrap"><table class="md-table" id="${tid}"><thead><tr>`;
+    html += headers.map(h => `<th>${inlineFormat(h)}</th>`).join(''); html += '</tr></thead><tbody>';
+    rows.forEach(r => { html += '<tr>' + headers.map((_,i) => `<td>${inlineFormat(r[i]||'')}</td>`).join('') + '</tr>'; });
+    html += `</tbody></table><button class="export-excel-btn" onclick="exportTableToExcel('${tid}','${fname}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Export Excel</button></div>`;
+    return html;
+  }
+  function exportTableToExcel(tid, fname) {
+    const tbl = document.getElementById(tid); if (!tbl || typeof XLSX === 'undefined') return;
+    const wb = XLSX.utils.book_new(); const ws = XLSX.utils.table_to_sheet(tbl);
+    XLSX.utils.book_append_sheet(wb, ws, 'Report'); XLSX.writeFile(wb, fname);
+  }
+
+  function formatText(text) {
+    if (!text) return ''; const lines = text.split('\n'); const out = []; let inList = false, i = 0, tableTitle = '';
+    while (i < lines.length) {
+      const line = lines[i]; const hm = line.match(/^(#{1,3})\s+(.*)/);
+      if (hm) {
+        tableTitle = hm[2].replace(/[^a-z0-9]/gi,'_').toLowerCase(); if (inList) { out.push('</ul>'); inList = false; }
+        const sz = hm[1].length === 1 ? 17 : hm[1].length === 2 ? 15.5 : 14;
+        out.push(`<div style="font-weight:600;font-size:${sz}px;margin:14px 0 5px;color:#111">${inlineFormat(hm[2])}</div>`); i++; continue;
+      }
+      if (line.includes('|') && i+1 < lines.length && /^[\|:\-\s]+$/.test(lines[i+1])) {
+        if (inList) { out.push('</ul>'); inList = false; } const tbl = parseMarkdownTable(lines, i);
+        if (tbl && tbl.rows.length) { out.push(renderTable(tbl.headers, tbl.rows, tableTitle)); i = tbl.endIdx; continue; }
+      }
+      if (line.trim() === '') { if (inList) { out.push('</ul>'); inList = false; } out.push('<div style="height:7px"></div>'); i++; continue; }
+      if (/^---+$/.test(line.trim())) { if (inList) { out.push('</ul>'); inList = false; } out.push('<hr style="border:none;border-top:1px solid #ebebeb;margin:10px 0">'); i++; continue; }
+      const nm = line.match(/^(\d+)\.\s+(.*)/);
+      if (nm) { if (inList) { out.push('</ul>'); inList = false; } out.push(`<div style="display:flex;gap:8px;margin:3px 0;padding-left:2px"><span style="flex-shrink:0;color:#888">${nm[1]}.</span><span>${inlineFormat(nm[2])}</span></div>`); i++; continue; }
+      const bm = line.match(/^[\-\*•]\s+(.*)/);
+      if (bm) { if (!inList) { out.push('<ul style="margin:4px 0;padding:0;list-style:none">'); inList=true; } out.push(`<li style="display:flex;gap:8px;margin:2px 0;padding-left:10px"><span style="flex-shrink:0;color:#bbb">•</span><span>${inlineFormat(bm[1])}</span></li>`); i++; continue; }
+      if (inList) { out.push('</ul>'); inList = false; }
+      out.push(`<div style="margin:4px 0;line-height:1.65">${inlineFormat(line)}</div>`); i++;
+    }
+    if (inList) out.push('</ul>'); return out.join('');
+  }
+
+  async function sendMessage() {
+    const msg = input.value.trim(); if (!msg || busy || isUploading) return;
+    busy = true; input.value = ''; setSendButtonMode('stop');
+    const fileForMsg = attachedFile ? { ...attachedFile } : null; clearAttachment();
+    renderUserMsgDOM(msg, fileForMsg?.name, fileForMsg?.previewUrl || window._pastePreview || null);
+    window._pastePreview = null; if (!history.length) saveSession(msg);
+
+    hideEmpty();
+    const botRow = document.createElement('div'); botRow.className = 'message-wrapper bot';
+    const icon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
+    botRow.innerHTML = `<div class="avatar bot">${icon}</div><div class="message-content"><div class="stream-status" style="font-size:12px;color:#999;margin-bottom:4px;display:none"></div><div class="stream-content"><div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div>`;
+    msgList.appendChild(botRow);
+    const statusEl = botRow.querySelector('.stream-status'); const contentEl = botRow.querySelector('.stream-content');
+    scrollBottom();
+
+    currentAbortController = new AbortController();
+    let fullText = '', gotFirstText = false, stopped = false, pendingFrame = null;
+    const TOOL_STAGES = {
+      'odoo_search': [[0, ''],[3, ' — querying Odoo'],[10, ' — scanning records'],[20, ' — filtering large dataset'],[40, ' — still working, complex query'],[80, ' — hang tight, almost there']],
+      '_default': [[0, ''],[5, ' — working'],[15, ' — still working'],[30, ' — this is taking a while'],[60, ' — hang tight']]
+    };
+    const THINKING_STAGES = [[0, 'thinking'],[5, 'thinking — analyzing results'],[15, 'thinking — large result set, organizing'],[30, 'thinking — this is a complex one'],[60, 'thinking — hang tight']];
+
+    function pickStage(stages, elapsedSec) { let pick = stages[0]; for (const s of stages) { if (elapsedSec >= s[0]) pick = s; else break; } return pick; }
+    let statusPhase = null, statusTool = '', statusStartedAt = 0, statusTimer = null;
+    function renderStatus() {
+      if (statusPhase === null) { statusEl.style.display = 'none'; return; }
+      statusEl.style.display = 'flex'; const elapsed = (Date.now() - statusStartedAt) / 1000;
+      if (statusPhase === 'tool') { const stages = TOOL_STAGES[statusTool] || TOOL_STAGES._default; const [, suffix] = pickStage(stages, elapsed); statusEl.innerHTML = `${escHtml(statusTool)}${escHtml(suffix)}<span class="dots-loading"></span>`; } 
+      else if (statusPhase === 'thinking') { const [, label] = pickStage(THINKING_STAGES, elapsed); statusEl.innerHTML = `${escHtml(label)}<span class="dots-loading"></span>`; }
+    }
+    function startStatus(phase, toolName) { statusPhase = phase; statusTool = toolName || ''; statusStartedAt = Date.now(); renderStatus(); if (statusTimer) clearInterval(statusTimer); statusTimer = setInterval(renderStatus, 1000); }
+    function stopStatus() { statusPhase = null; if (statusTimer) { clearInterval(statusTimer); statusTimer = null; } statusEl.style.display = 'none'; }
+
+    const payload = {
+      message: msg,
+      history: history.map(({ role, content, fileId, fileName, fileContent }) => {
+        const entry = { role, content }; if (fileId) entry.file_id = fileId; if (fileName) entry.file_name = fileName; if (fileContent) entry.file_content = fileContent; return entry;
+      }),
+      file_content: fileForMsg?.content || '', file_name: fileForMsg?.name || '', file_id: fileForMsg?.fileId || '', excel_base64: fileForMsg?.excelBase64 || '',
+      role: currentUser?.role || 'guest', user_name: currentUser?.name || '', user_id: currentUser?.uid || 0,
+      model: selectedModel, free_mode: freeMode, session_id: currentSessionId || '',
+      session_title: allSessions.find(s => s.id === currentSessionId)?.title || msg.substring(0, 20), session_token: currentUser?.session_token || '',
+      user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+    };
+
+    try {
+      const res = await fetch(BACKEND + '/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: currentAbortController.signal });
+      if (!res.ok) { const errText = await res.text().catch(() => `HTTP ${res.status}`); contentEl.innerHTML = `<span class="error-text">Server error: ${escHtml(errText.slice(0, 300))}</span>`; return; }
+      if (!res.body) { contentEl.innerHTML = `<span class="error-text">Streaming not supported in this browser.</span>`; return; }
+      const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = '';
+      let lastDataAt = Date.now();
+      while (true) {
+        // Timeout: if no data for 120 seconds, break out
+        const readPromise = reader.read();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('stream_timeout')), 120000));
+        let readResult;
+        try { readResult = await Promise.race([readPromise, timeoutPromise]); }
+        catch (timeoutErr) {
+          if (timeoutErr.message === 'stream_timeout') {
+            console.warn('[STREAM] Timeout — no data for 120s, closing stream');
+            try { reader.cancel(); } catch {}
+            break;
+          }
+          throw timeoutErr;
+        }
+        const { value, done } = readResult; if (done) break;
+        lastDataAt = Date.now();
+        buffer += decoder.decode(value, { stream: true }); let idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          const rawEvent = buffer.slice(0, idx); buffer = buffer.slice(idx + 2);
+          const dataLine = rawEvent.split('\n').find(l => l.startsWith('data: ')); if (!dataLine) continue;
+          let evt; try { evt = JSON.parse(dataLine.slice(6)); } catch { continue; }
+          if (evt.type === 'text') {
+            if (!gotFirstText) { contentEl.innerHTML = ''; gotFirstText = true; }
+            fullText += evt.delta || '';
+            if (!pendingFrame) { pendingFrame = requestAnimationFrame(() => { contentEl.innerHTML = formatText(fullText); scrollBottom(); pendingFrame = null; }); }
+          } else if (evt.type === 'tool_use') { startStatus('tool', evt.name || ''); } 
+          else if (evt.type === 'tool_result') { startStatus('thinking'); } 
+          else if (evt.type === 'error') {
+            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; } stopStatus();
+            contentEl.innerHTML = (fullText ? formatText(fullText) + '<br><br>' : '') + `<span class="error-text">Error: ${escHtml(evt.message || 'unknown')}</span>`;
+          } else if (evt.type === 'overloaded') {
+            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; } stopStatus();
+            const fb = evt.fallback || 'claude-haiku-4-5-20251001';
+            const fbLabel = fb.includes('haiku') ? 'Haiku (Fast)' : fb.includes('opus') ? 'Opus' : 'Sonnet';
+            contentEl.innerHTML = `<div style="text-align:center;padding:20px 0">
+              <div style="font-size:14px;color:#888;margin-bottom:12px">⚠️ Model is currently busy</div>
+              <button onclick="retryWithModel('${fb}')" style="padding:10px 20px;background:#111;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">
+                Retry with ${escHtml(fbLabel)}
+              </button>
+              <button onclick="retryWithModel('${escHtml(evt.model)}')" style="padding:10px 20px;background:#fff;color:#111;border:1px solid #ddd;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-left:8px">
+                Try again
+              </button>
+            </div>`;
+            // Store last message for retry
+            window._lastRetryMsg = msg;
+            window._lastRetryFile = fileForMsg;
+          } else if (evt.type === 'done') {
+            if (pendingFrame) { cancelAnimationFrame(pendingFrame); pendingFrame = null; } stopStatus();
+            if (fullText) { const extraBtn = buildExtraButton(fullText); contentEl.innerHTML = formatText(fullText) + extraBtn; }
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') { stopped = true; stopStatus(); contentEl.innerHTML = fullText ? formatText(fullText) + `<div style="margin-top:8px;font-size:12px;color:#999">[已停止]</div>` : `<span style="color:#999;font-size:13px">[已停止]</span>`; } 
+      else { stopStatus(); contentEl.innerHTML = `<span class="error-text">Network error: ${escHtml(err.message || String(err))}</span>`; }
+    } finally {
+      stopStatus();
+      if (fullText) {
+        history.push({ role: 'user', content: msg, fileName: fileForMsg?.name || null, imagePreview: fileForMsg?.previewUrl || null, fileId: fileForMsg?.fileId || null, fileContent: fileForMsg?.content || null });
+        history.push({ role: 'assistant', content: fullText + (stopped ? '\n\n[stopped by user]' : '') }); saveSession();
+      }
+      currentAbortController = null; busy = false; setSendButtonMode('send'); input.focus(); scrollBottom();
+    }
+  }
+
+  function stopGeneration() { if (currentAbortController) currentAbortController.abort(); }
+
+  window.retryWithModel = function(model) {
+    // Remove the overloaded bot bubble + the user bubble (sendMessage will re-add)
+    const lastBot = msgList.querySelector('.message-wrapper.bot:last-child');
+    if (lastBot) lastBot.remove();
+    const lastUser = msgList.querySelector('.message-wrapper.user:last-child');
+    if (lastUser) lastUser.remove();
+    if (history.length) history.pop();
+    // Reset state
+    busy = false;
+    setSendButtonMode('send');
+    // Switch model and resend
+    selectedModel = model;
+    document.getElementById('modelSelect').value = model;
+    const retryMsg = window._lastRetryMsg;
+    if (retryMsg) {
+      input.value = retryMsg;
+      sendMessage();
+    }
+  };
+
+  function setSendButtonMode(mode) {
+    if (mode === 'stop') {
+      sendBtn.disabled = false; sendBtn.classList.add('stop-mode');
+      sendBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>`;
+      sendBtn.onclick = stopGeneration; sendBtn.title = 'Stop generation';
+    } else {
+      sendBtn.classList.remove('stop-mode');
+      sendBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+      sendBtn.onclick = sendMessage; sendBtn.title = 'Send'; sendBtn.disabled = !input.value.trim();
+    }
+  }
+
+  function buildExtraButton(text) {
+    const MONTHS = {january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
+    let y, m;
+    // Try Chinese format: 2026年4月 or 26年4月
+    const zhMatch = text.match(/(\d{2,4})[年](\d{1,2})[月]/);
+    // Try English: "April 2026" or "2026 April"
+    const monthNames = 'january|february|march|april|may|june|july|august|september|october|november|december';
+    const enMatch1 = text.match(new RegExp(`(${monthNames})\\s+(\\d{4})`, 'i'));
+    const enMatch2 = text.match(new RegExp(`(\\d{4})\\s+(${monthNames})`, 'i'));
+    // Try ISO: 2026-04
+    const isoMatch = text.match(/(\d{4})-(\d{2})(?:\s|,|$)/);
+    
+    if (zhMatch) {
+      y = zhMatch[1].length === 2 ? '20' + zhMatch[1] : zhMatch[1];
+      m = zhMatch[2].padStart(2, '0');
+    } else if (enMatch1) {
+      y = enMatch1[2]; m = MONTHS[enMatch1[1].toLowerCase()];
+    } else if (enMatch2) {
+      y = enMatch2[1]; m = MONTHS[enMatch2[2].toLowerCase()];
+    } else if (isoMatch) {
+      y = isoMatch[1]; m = isoMatch[2];
+    } else {
+      return '';
+    }
+
+    const commissionKeywords = ['Commission', 'commission', '提成', '销售提成', '销售员销售统计', 'Sales Report', 'sales report'];
+    if (!commissionKeywords.some(kw => text.includes(kw))) return '';
+
+    // Detect specific salesperson
+    const spMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*(?:在|的|'s|\s)\s*(?:\d{2,4}\s*年|(?:January|February|March|April|May|June|July|August|September|October|November|December))/i);
+    let url = `${BACKEND}/export/commission?year=${y}&month=${m}`;
+    let label = `Download Excel · ${y}/${m} Full Report`;
+    const excludeNames = ['PART','Commission','Monthly','Report','Total','Grand','Sales','January','February','March','April','May','June','July','August','September','October','November','December'];
+    if (spMatch && !excludeNames.includes(spMatch[1]) && !text.includes('全公司') && !text.includes('所有销售') && !text.includes('all salesperson')) {
+      const sp = encodeURIComponent(spMatch[1].trim());
+      url += `&salesperson=${sp}`;
+      label = `Download Excel · ${spMatch[1].trim()} ${y}/${m}`;
+    }
+    return `<a href="${url}" target="_blank" download style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:#111;color:#fff;border-radius:8px;font-size:12.5px;font-weight:500;text-decoration:none;font-family:inherit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>${label}</a>`;
+  }
+
+  async function doLogin() {
+    const username = document.getElementById('loginUser').value.trim(); const password = document.getElementById('loginPass').value;
+    const btn = document.getElementById('loginBtn'); const errEl = document.getElementById('loginError');
+    if (!username || !password) { showLoginError('Please enter your username and password.'); return; }
+    btn.disabled = true; btn.textContent = 'Signing in…'; errEl.style.display = 'none';
+    try {
+      const res = await fetch(BACKEND + '/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, client_type: IS_MOBILE ? 'mobile' : 'web' }) });
+      const data = await res.json();
+      if (data.success) {
+        currentUser = { uid: data.uid, name: data.name, username: data.username, role: data.role || 'guest', role_label: data.role_label || '', permissions: data.permissions || {}, session_token: data.session_token || '' };
+        userStore.setItem('chumart_user', JSON.stringify(currentUser)); showApp();
+      } else { showLoginError(data.error || 'Invalid username or password.'); }
+    } catch (e) { showLoginError('Connection error. Please try again.'); } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+  }
+
+  function showLoginError(msg) { const el = document.getElementById('loginError'); el.textContent = msg; el.style.display = 'block'; }
+
+  async function showApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    const initials = (currentUser.name || currentUser.username || '?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('userAvatar').textContent = initials;
+    document.getElementById('userName').textContent = currentUser.name || currentUser.username;
+    document.getElementById('roleBadge').textContent = currentUser.role_label || currentUser.role || '';
+    const firstName = (currentUser.name || currentUser.username || 'Chumart').split(' ')[0];
+    document.getElementById('greetingTitle').textContent = `Hello, ${firstName} 👋`;
+    document.getElementById('modelSelectorWrap').style.display = 'block';
+    if (currentUser.role === 'admin') {
+      // Admin: full model list, default Sonnet
+      selectedModel = 'claude-sonnet-4-5';
+      document.getElementById('modelSelect').value = 'claude-sonnet-4-5';
+      document.getElementById('modeSelectorWrap').classList.add('visible');
+    } else {
+      const defaultSonnet = currentUser.role === 'finance' || currentUser.role === 'sales_manager';
+      document.getElementById('modelSelect').innerHTML = `<optgroup label="── Claude ──"><option value="claude-sonnet-4-5"${defaultSonnet ? ' selected' : ''}>Claude Sonnet 4.5${defaultSonnet ? ' (default)' : ''}</option><option value="claude-haiku-4-5-20251001"${!defaultSonnet ? ' selected' : ''}>Claude Haiku 4.5 · Fast${!defaultSonnet ? ' (default)' : ''}</option></optgroup>`;
+      selectedModel = defaultSonnet ? 'claude-sonnet-4-5' : 'claude-haiku-4-5-20251001';
+      document.getElementById('modelSelect').value = selectedModel;
+    }
+    await loadSessionsFromDB();
+  }
+
+  async function loadSessionsFromDB() {
+    if (!currentUser?.uid) { if (allSessions.length) loadSession(allSessions[0].id); else newChat(); return; }
+    try {
+      const res = await fetch(`${BACKEND}/sessions/${currentUser.uid}`); const data = await res.json();
+      if (data.sessions && data.sessions.length > 0) { allSessions = data.sessions.map(s => ({ id: s.id, title: s.title, history: s.history, updated_at: s.updated_at })); renderSidebar(); }
+      newChat();
+    } catch(e) {
+      const saved = localStorage.getItem('chumartChats'); if (saved) try { allSessions = JSON.parse(saved); } catch(ex) {} newChat();
+    }
+  }
+
+  function doLogout() {
+    sessionStorage.removeItem('chumart_user'); localStorage.removeItem('chumart_user'); currentUser = null; selectedModel = 'claude-haiku-4-5-20251001';
+    document.getElementById('modelSelectorWrap').style.display = 'none'; document.getElementById('modeSelectorWrap').classList.remove('visible'); document.getElementById('freeModeToggle').checked = false; freeMode = false;
+    document.getElementById('modelSelect').innerHTML = `<optgroup label="── Claude ──"><option value="claude-haiku-4-5-20251001" selected>Claude Haiku 4.5 · Fast (default)</option><option value="claude-sonnet-4-5">Claude Sonnet 4.5</option><option value="claude-opus-4-5">Claude Opus 4.5</option></optgroup><optgroup label="── OpenAI GPT-5 (Latest) ──"><option value="gpt-5.4">GPT-5.4 · Flagship</option><option value="gpt-5.4-mini">GPT-5.4 Mini · Fast</option><option value="gpt-5.4-nano">GPT-5.4 Nano · Fastest</option></optgroup><optgroup label="── OpenAI GPT-4 ──"><option value="gpt-4o">GPT-4o</option><option value="gpt-4o-mini">GPT-4o Mini</option></optgroup>`;
+    document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('loginUser').value = ''; document.getElementById('loginPass').value = '';
+    history = []; msgList.innerHTML = ''; emptyEl.style.display = 'flex'; closeSidebar();
+  }
+
+  window.showImageOverlay = function(src) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer';
+    overlay.innerHTML = `<img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 4px 40px rgba(0,0,0,0.5)">`;
+    overlay.onclick = () => overlay.remove(); document.body.appendChild(overlay);
   }
 </script>
 </body>
