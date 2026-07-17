@@ -398,6 +398,12 @@
     <button onclick="togglePOReminders()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
       📦 PO Reminders
     </button>
+    <button onclick="toggleCaptureReminders()" style="padding:8px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+      💳 Capture Reminders
+    </button>
+    <button onclick="toggleCommissionReports()" style="padding:8px 16px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+      📊 Commission Reports
+    </button>
     <a href="/" class="back-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       Back to Chat
@@ -465,6 +471,102 @@
         <button onclick="testPOReminder()" style="padding:8px 14px;background:#ca8a04;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test</button>
       </div>
       <div id="poReminderList" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Capture Reminders Panel (hidden by default) -->
+<div id="captureReminderPanel" style="display:none">
+  <div class="container" style="padding-bottom:0;padding-left:32px;padding-right:32px">
+    <div class="reminder-card">
+      <div class="reminder-header">
+        <h3>💳 Stripe Capture Reminders</h3>
+      </div>
+      <p style="font-size:13px;color:#888;margin:8px 0 4px">
+        Reminds you of Stripe payments that are authorized but not yet captured (authorizations expire after 7 days). Sent as CHUMART AI to each recipient's Discuss DM.
+      </p>
+      <div style="margin:16px 0;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="min-width:70px;width:70px">
+          <label>HOUR</label>
+          <select id="capNewHour" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <option value="">--</option>
+            <option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option>
+            <option value="9" selected>9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option>
+            <option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option>
+            <option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option>
+            <option value="18">6 PM</option><option value="19">7 PM</option><option value="20">8 PM</option>
+            <option value="21">9 PM</option><option value="22">10 PM</option><option value="23">11 PM</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:60px;width:60px">
+          <label>MIN</label>
+          <select id="capNewMin" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <script>document.write(Array.from({length:60},(_,i)=>`<option value="${String(i).padStart(2,'0')}"${i===30?' selected':''}>:${String(i).padStart(2,'0')}</option>`).join(''))</script>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:110px">
+          <label>FREQUENCY</label>
+          <select id="capNewFreq" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <option value="everyday">Everyday</option>
+            <option value="weekday">Weekday (Mon-Fri)</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:200px;flex:1">
+          <label>RECIPIENTS (select internal users)</label>
+          <div id="capNewRecipients" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;min-height:38px"><span style="color:#aaa;font-size:13px">Loading…</span></div>
+        </div>
+        <button onclick="addCaptureReminder()" style="padding:8px 14px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
+        <button onclick="testCaptureReminder()" style="padding:8px 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test</button>
+        <button onclick="previewCaptureReminder()" style="padding:8px 14px;background:#ca8a04;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">👁 Preview</button>
+      </div>
+      <div id="capReminderList" style="margin-top:12px"></div>
+      <div id="capPreviewBox" style="margin-top:12px;display:none;background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;white-space:pre-wrap;font-size:13px;font-family:ui-monospace,monospace"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Commission Reports Panel (hidden by default) -->
+<div id="commissionReportPanel" style="display:none">
+  <div class="container" style="padding-bottom:0;padding-left:32px;padding-right:32px">
+    <div class="reminder-card">
+      <div class="reminder-header">
+        <h3>📊 Monthly Commission Reports</h3>
+      </div>
+      <p style="font-size:13px;color:#888;margin:8px 0 4px">
+        Automatically sends last month's sales commission summary (Commission Base, Table B) + full Excel every month. Sent as CHUMART AI to each recipient's Discuss DM, and by email (Excel attached).
+      </p>
+      <div style="margin:16px 0;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="min-width:90px;width:90px">
+          <label>DAY (of month)</label>
+          <select id="commNewDay" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <script>document.write(Array.from({length:28},(_,i)=>`<option value="${i+1}"${i===0?' selected':''}>Day ${i+1}</option>`).join(''))</script>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:70px;width:70px">
+          <label>HOUR</label>
+          <select id="commNewHour" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <option value="6">6 AM</option><option value="7">7 AM</option><option value="8">8 AM</option>
+            <option value="9" selected>9 AM</option><option value="10">10 AM</option><option value="11">11 AM</option>
+            <option value="12">12 PM</option><option value="13">1 PM</option><option value="14">2 PM</option>
+            <option value="15">3 PM</option><option value="16">4 PM</option><option value="17">5 PM</option>
+            <option value="18">6 PM</option><option value="19">7 PM</option><option value="20">8 PM</option>
+            <option value="21">9 PM</option><option value="22">10 PM</option><option value="23">11 PM</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:60px;width:60px">
+          <label>MIN</label>
+          <select id="commNewMin" style="padding:8px 8px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px">
+            <script>document.write(Array.from({length:60},(_,i)=>`<option value="${String(i).padStart(2,'0')}"${i===0?' selected':''}>:${String(i).padStart(2,'0')}</option>`).join(''))</script>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:200px;flex:1">
+          <label>RECIPIENTS (select internal users)</label>
+          <div id="commNewRecipients" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;min-height:38px"><span style="color:#aaa;font-size:13px">Loading…</span></div>
+        </div>
+        <button onclick="addCommissionReport()" style="padding:8px 14px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">+ Add</button>
+        <button onclick="testCommissionReport()" style="padding:8px 14px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;height:38px">🔔 Test (last month)</button>
+      </div>
+      <div id="commReportList" style="margin-top:12px"></div>
     </div>
   </div>
 </div>
@@ -1234,12 +1336,47 @@
   // ── PO Reminders Management ──────────────────────────────────────
   let poOdooUsers = [];
 
+  // ── Recipient helpers: store Odoo uid, tolerate legacy name values ──
+  function resolveUidValue(v) {
+    v = String(v == null ? '' : v).trim();
+    if (v === 'ALL' || v === '') return v;
+    if (poOdooUsers.some(u => String(u.uid) === v)) return v;
+    const m = poOdooUsers.find(u => u.name === v);  // legacy name → uid
+    return m ? String(m.uid) : v;
+  }
+  function userCheckboxHtml(selectedCsv) {
+    if (!poOdooUsers.length) return '<span style="color:#aaa;font-size:13px">Loading…</span>';
+    const raw = String(selectedCsv == null ? '' : selectedCsv).split(',').map(x => x.trim()).filter(Boolean);
+    const norm = new Set();
+    raw.forEach(v => {
+      if (poOdooUsers.some(u => String(u.uid) === v)) norm.add(v);
+      else { const m = poOdooUsers.find(u => u.name === v); if (m) norm.add(String(m.uid)); }  // legacy name → uid
+    });
+    return poOdooUsers.map(u =>
+      `<label style="display:inline-flex;align-items:center;gap:3px;font-size:13px;white-space:nowrap;cursor:pointer">`
+      + `<input type="checkbox" value="${esc(String(u.uid))}"${norm.has(String(u.uid)) ? ' checked' : ''}> ${esc(u.name)}</label>`
+    ).join('');
+  }
+  function renderUserCheckboxes(containerId, selectedCsv) {
+    const cont = document.getElementById(containerId);
+    if (cont) cont.innerHTML = userCheckboxHtml(selectedCsv);
+  }
+  function getCheckedUids(containerId) {
+    const cont = document.getElementById(containerId);
+    if (!cont) return '';
+    return Array.from(cont.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value).join(',');
+  }
+
   function togglePOReminders() {
     const panel = document.getElementById('poReminderPanel');
     const isHidden = panel.style.display === 'none';
     panel.style.display = isHidden ? 'block' : 'none';
     // Hide other panels
     document.getElementById('reminderPanel').style.display = 'none';
+    const capPanel = document.getElementById('captureReminderPanel');
+    if (capPanel) capPanel.style.display = 'none';
+    const commPanel1 = document.getElementById('commissionReportPanel');
+    if (commPanel1) commPanel1.style.display = 'none';
     if (isHidden) {
       // Load users FIRST, then reminders (so dropdown is populated before rendering)
       loadPOOdooUsers().then(() => loadPOReminders());
@@ -1254,7 +1391,7 @@
       poOdooUsers = data.users;
       const sel = document.getElementById('poNewTarget');
       sel.innerHTML = '<option value="ALL">All Internal Users</option>' +
-        poOdooUsers.map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');
+        poOdooUsers.map(u => `<option value="${esc(String(u.uid))}">${esc(u.name)}</option>`).join('');
     } catch(e) {
       console.error('Failed to load Odoo users:', e);
     }
@@ -1281,7 +1418,7 @@
       document.getElementById('poReminderList').innerHTML = '<p style="color:#888;font-size:13px">No scheduled messages yet. Add one above.</p>';
       return;
     }
-    const userOpts = '<option value="ALL">Everyone</option>' + poOdooUsers.map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');
+    const userOpts = '<option value="ALL">Everyone</option>' + poOdooUsers.map(u => `<option value="${esc(String(u.uid))}">${esc(u.name)}</option>`).join('');
     const rows = schedules.map(s => {
       const poMode = s.only_payment_pos || 'none';
       const freq = s.frequency || 'everyday';
@@ -1329,7 +1466,7 @@
       </div>`;
     schedules.forEach(s => {
       const sel = document.getElementById('po-target-' + s.id);
-      if (sel) sel.value = s.target_user;
+      if (sel) sel.value = resolveUidValue(s.target_user);  // legacy name rows → uid
     });
   }
 
@@ -1404,10 +1541,11 @@
   }
 
   async function testPOReminder() {
-    const target = document.getElementById('poNewTarget').value || 'Ashley';
+    const target = document.getElementById('poNewTarget').value || 'ALL';
     const message = document.getElementById('poNewMessage').value.trim();
     const poAttach = document.getElementById('poNewOnlyPayment').value;
-    const label = target === 'ALL' ? 'all internal users' : target;
+    const _tu = poOdooUsers.find(u => String(u.uid) === String(target));
+    const label = target === 'ALL' ? 'all internal users' : (_tu ? _tu.name : target);
     if (!confirm(`Send a test message to ${label} right now?`)) return;
     try {
       const params = new URLSearchParams({ admin_key: adminKey, target_user: target, message, only_payment_pos: poAttach });
@@ -1415,6 +1553,283 @@
       const data = await res.json();
       if (data.error) { alert('Error: ' + data.error); return; }
       alert('Test message sent! Check Odoo Discuss.');
+    } catch(e) { alert(e.message); }
+  }
+
+  // ── Capture Reminders ──
+  function toggleCaptureReminders() {
+    const panel = document.getElementById('captureReminderPanel');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    document.getElementById('reminderPanel').style.display = 'none';
+    document.getElementById('poReminderPanel').style.display = 'none';
+    const commPanel2 = document.getElementById('commissionReportPanel');
+    if (commPanel2) commPanel2.style.display = 'none';
+    if (isHidden) loadPOOdooUsers().then(() => {
+      renderUserCheckboxes('capNewRecipients', '');
+      loadCaptureReminders();
+    });
+  }
+
+  async function loadCaptureReminders() {
+    try {
+      const res = await fetch(`${BACKEND}/admin/capture-reminders?admin_key=${encodeURIComponent(adminKey)}`);
+      const data = await res.json();
+      if (data.error) { document.getElementById('capReminderList').innerHTML = `<p style="color:red">${esc(data.error)}</p>`; return; }
+      renderCaptureReminders(data.schedules || []);
+    } catch(e) {
+      document.getElementById('capReminderList').innerHTML = `<p style="color:red">${esc(e.message)}</p>`;
+    }
+  }
+
+  function renderCaptureReminders(schedules) {
+    if (!schedules.length) {
+      document.getElementById('capReminderList').innerHTML = '<p style="color:#888;font-size:13px">No capture reminder schedules yet. Add one above.</p>';
+      return;
+    }
+    const rows = schedules.map(s => {
+      const freq = s.frequency || 'everyday';
+      const statusBadge = s.active
+        ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
+        : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Paused</span>';
+      let lastFired = '—';
+      if (s.last_fired_at) {
+        try {
+          const d = new Date(s.last_fired_at);
+          lastFired = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles' });
+        } catch(e) { lastFired = s.last_fired_at; }
+      }
+      return `<tr id="cap-row-${s.id}">
+        <td>${s.id}</td>
+        <td><input type="text" value="${esc(s.time_pt)}" id="cap-time-${s.id}" style="width:50px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCaptureSchedule(${s.id})"></td>
+        <td><select id="cap-freq-${s.id}" style="padding:3px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:12px" onchange="saveCaptureSchedule(${s.id})">
+          <option value="everyday"${freq==='everyday'?' selected':''}>Everyday</option>
+          <option value="weekday"${freq==='weekday'?' selected':''}>Mon–Fri</option>
+        </select></td>
+        <td><div id="cap-recip-${s.id}" onchange="saveCaptureSchedule(${s.id})" style="display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;min-width:180px">${userCheckboxHtml(s.recipients)}</div></td>
+        <td>${statusBadge}</td>
+        <td style="font-size:11px;color:#888;white-space:nowrap">${lastFired}</td>
+        <td style="white-space:nowrap">
+          <button onclick="toggleCaptureSchedule(${s.id}, ${!s.active})" style="padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸' : '▶'}</button>
+          <button onclick="deleteCaptureSchedule(${s.id})" style="padding:4px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+    document.getElementById('capReminderList').innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="reminder-table">
+          <thead><tr><th>ID</th><th>Time</th><th>Frequency</th><th>Recipients</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function addCaptureReminder() {
+    const hour = document.getElementById('capNewHour').value;
+    const min = document.getElementById('capNewMin').value;
+    const freq = document.getElementById('capNewFreq').value;
+    const recipients = getCheckedUids('capNewRecipients');
+    if (!hour) { alert('Please select an hour'); return; }
+    if (!recipients) { alert('Please select at least one recipient'); return; }
+    const time_pt = `${String(hour).padStart(2,'0')}:${min}`;
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, time_pt, recipients, frequency: freq });
+      const res = await fetch(`${BACKEND}/admin/capture-reminders?${params}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCaptureReminders();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function saveCaptureSchedule(id) {
+    const time = document.getElementById('cap-time-' + id)?.value?.trim();
+    const recipients = getCheckedUids('cap-recip-' + id);
+    const freq = document.getElementById('cap-freq-' + id)?.value;
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey });
+      if (time) params.set('time_pt', time);
+      if (recipients !== undefined) params.set('recipients', recipients);
+      if (freq) params.set('frequency', freq);
+      const res = await fetch(`${BACKEND}/admin/capture-reminders/${id}?${params}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      const row = document.getElementById('cap-row-' + id);
+      if (row) { row.style.background = '#faf5ff'; setTimeout(() => row.style.background = '', 800); }
+    } catch(e) { alert(e.message); }
+  }
+
+  async function toggleCaptureSchedule(id, newActive) {
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, active: newActive });
+      const res = await fetch(`${BACKEND}/admin/capture-reminders/${id}?${params}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCaptureReminders();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function deleteCaptureSchedule(id) {
+    if (!confirm('Delete this capture reminder schedule?')) return;
+    try {
+      const res = await fetch(`${BACKEND}/admin/capture-reminders/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCaptureReminders();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function testCaptureReminder() {
+    const recipients = getCheckedUids('capNewRecipients');
+    if (!recipients) { alert('Please select recipient(s) before testing'); return; }
+    if (!confirm(`Send a test capture reminder to selected user(s) right now?`)) return;
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, recipients });
+      const res = await fetch(`${BACKEND}/admin/capture-reminders/test?${params}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error); return; }
+      alert('Test capture reminder sent! Check Odoo Discuss.');
+    } catch(e) { alert(e.message); }
+  }
+
+  async function previewCaptureReminder() {
+    const box = document.getElementById('capPreviewBox');
+    box.style.display = 'block';
+    box.textContent = 'Loading preview...';
+    try {
+      const res = await fetch(`${BACKEND}/admin/capture-reminder-preview?admin_key=${encodeURIComponent(adminKey)}`);
+      const data = await res.json();
+      if (data.error) { box.textContent = 'Error: ' + data.error; return; }
+      if (data.pending === 0) { box.textContent = '✅ ' + (data.message || 'No pending capture transactions'); return; }
+      box.textContent = data.preview_text || JSON.stringify(data, null, 2);
+    } catch(e) { box.textContent = 'Error: ' + e.message; }
+  }
+
+  // ── Commission Reports ──
+  function toggleCommissionReports() {
+    const panel = document.getElementById('commissionReportPanel');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    document.getElementById('reminderPanel').style.display = 'none';
+    const po = document.getElementById('poReminderPanel'); if (po) po.style.display = 'none';
+    const cap = document.getElementById('captureReminderPanel'); if (cap) cap.style.display = 'none';
+    if (isHidden) loadPOOdooUsers().then(() => {
+      renderUserCheckboxes('commNewRecipients', '');
+      loadCommissionReports();
+    });
+  }
+
+  async function loadCommissionReports() {
+    try {
+      const res = await fetch(`${BACKEND}/admin/commission-reports?admin_key=${encodeURIComponent(adminKey)}`);
+      const data = await res.json();
+      if (data.error) { document.getElementById('commReportList').innerHTML = `<p style="color:red">${esc(data.error)}</p>`; return; }
+      renderCommissionReports(data.schedules || []);
+    } catch(e) {
+      document.getElementById('commReportList').innerHTML = `<p style="color:red">${esc(e.message)}</p>`;
+    }
+  }
+
+  function renderCommissionReports(schedules) {
+    if (!schedules.length) {
+      document.getElementById('commReportList').innerHTML = '<p style="color:#888;font-size:13px">No commission report schedules yet. Add one above.</p>';
+      return;
+    }
+    const rows = schedules.map(s => {
+      const statusBadge = s.active
+        ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Active</span>'
+        : '<span style="background:#999;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">Paused</span>';
+      let lastFired = '—';
+      if (s.last_fired_at) {
+        try {
+          const d = new Date(s.last_fired_at);
+          lastFired = d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles' });
+        } catch(e) { lastFired = s.last_fired_at; }
+      }
+      return `<tr id="comm-row-${s.id}">
+        <td>${s.id}</td>
+        <td><input type="number" min="1" max="28" value="${s.day_of_month}" id="comm-day-${s.id}" style="width:60px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"></td>
+        <td><input type="text" value="${esc(s.time_pt)}" id="comm-time-${s.id}" style="width:50px;padding:4px 4px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;text-align:center" onchange="saveCommissionSchedule(${s.id})"></td>
+        <td><div id="comm-recip-${s.id}" onchange="saveCommissionSchedule(${s.id})" style="display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;min-width:180px">${userCheckboxHtml(s.recipients)}</div></td>
+        <td>${statusBadge}</td>
+        <td style="font-size:11px;color:#888;white-space:nowrap">${lastFired}</td>
+        <td style="white-space:nowrap">
+          <button onclick="toggleCommissionSchedule(${s.id}, ${!s.active})" style="padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">${s.active ? '⏸' : '▶'}</button>
+          <button onclick="deleteCommissionSchedule(${s.id})" style="padding:4px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#dc2626;cursor:pointer;font-size:12px">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+    document.getElementById('commReportList').innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="reminder-table">
+          <thead><tr><th>ID</th><th>Day</th><th>Time</th><th>Recipients</th><th>Status</th><th>Last Fired</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function addCommissionReport() {
+    const day = document.getElementById('commNewDay').value;
+    const hour = document.getElementById('commNewHour').value;
+    const min = document.getElementById('commNewMin').value;
+    const recipients = getCheckedUids('commNewRecipients');
+    if (!recipients) { alert('Please select at least one recipient'); return; }
+    const time_pt = `${String(hour).padStart(2,'0')}:${min}`;
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, day_of_month: day, time_pt, recipients });
+      const res = await fetch(`${BACKEND}/admin/commission-reports?${params}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCommissionReports();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function saveCommissionSchedule(id) {
+    const day = document.getElementById('comm-day-' + id)?.value;
+    const time = document.getElementById('comm-time-' + id)?.value?.trim();
+    const recipients = getCheckedUids('comm-recip-' + id);
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey });
+      if (day) params.set('day_of_month', day);
+      if (time) params.set('time_pt', time);
+      if (recipients !== undefined) params.set('recipients', recipients);
+      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?${params}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      const row = document.getElementById('comm-row-' + id);
+      if (row) { row.style.background = '#ecfeff'; setTimeout(() => row.style.background = '', 800); }
+    } catch(e) { alert(e.message); }
+  }
+
+  async function toggleCommissionSchedule(id, newActive) {
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, active: newActive });
+      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?${params}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCommissionReports();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function deleteCommissionSchedule(id) {
+    if (!confirm('Delete this commission report schedule?')) return;
+    try {
+      const res = await fetch(`${BACKEND}/admin/commission-reports/${id}?admin_key=${encodeURIComponent(adminKey)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      loadCommissionReports();
+    } catch(e) { alert(e.message); }
+  }
+
+  async function testCommissionReport() {
+    const recipients = getCheckedUids('commNewRecipients');
+    if (!recipients) { alert('Please select recipient(s) before testing'); return; }
+    if (!confirm(`Send a test commission report (last month) to selected user(s) right now?`)) return;
+    try {
+      const params = new URLSearchParams({ admin_key: adminKey, recipients });
+      const res = await fetch(`${BACKEND}/admin/commission-reports/test?${params}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error); return; }
+      alert('Test commission report sent! Check Odoo Discuss.');
     } catch(e) { alert(e.message); }
   }
 </script>
